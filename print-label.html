@@ -1,7 +1,166 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR štítek</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js" defer></script><style>
-body{background:#fff;color:#000}.label-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}.label{width:30mm;height:20mm;border:0;display:grid;grid-template-columns:15mm 1fr;gap:2mm;align-items:center;padding:1mm;background:#fff;color:#000}.qr{width:14mm;height:14mm}.text{font-family:Arial,sans-serif;text-align:center;line-height:1.05}.main{font-size:3.3mm;font-weight:700}.code{font-size:3.5mm;font-weight:800;margin-top:1.3mm}.under{font-size:2.5mm;margin-top:1mm;color:#333}.controls{position:fixed;left:10px;top:10px;background:#111;color:#fff;padding:10px;border-radius:10px}.controls button{background:#fff;color:#111}.no-print{display:block}@media print{@page{size:30mm 20mm;margin:0}.controls{display:none!important}.label-page{padding:0;min-height:20mm}.label{width:30mm;height:20mm}}
-</style></head><body>
-<div class="controls no-print"><button onclick="window.print()">🖨️ Tisk</button> <button onclick="window.close()">Zavřít</button></div><div class="label-page"><div id="label" class="label"><div id="qr" class="qr"></div><div class="text"><div id="main" class="main">Načítám…</div><div id="code" class="code"></div><div id="under" class="under"></div></div></div></div>
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>QR štítek</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script src="config.js"></script>
+  <script src="qr-mini.js"></script>
+  <script src="app.js"></script>
+
+  <style>
+    body{
+      background:#fff;
+      color:#000
+    }
+
+    .label-page{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px
+    }
+
+    .label{
+      width:30mm;
+      height:20mm;
+      border:0;
+      display:grid;
+      grid-template-columns:15mm 1fr;
+      gap:2mm;
+      align-items:center;
+      padding:1mm;
+      background:#fff;
+      color:#000
+    }
+
+    .qr{
+      width:14mm;
+      height:14mm
+    }
+
+    .text{
+      font-family:Arial,sans-serif;
+      text-align:center;
+      line-height:1.05
+    }
+
+    .main{
+      font-size:3.3mm;
+      font-weight:700
+    }
+
+    .code{
+      font-size:3.5mm;
+      font-weight:800;
+      margin-top:1.3mm
+    }
+
+    .under{
+      font-size:2.5mm;
+      margin-top:1mm;
+      color:#333
+    }
+
+    .controls{
+      position:fixed;
+      left:10px;
+      top:10px;
+      background:#111;
+      color:#fff;
+      padding:10px;
+      border-radius:10px
+    }
+
+    .controls button{
+      background:#fff;
+      color:#111
+    }
+
+    .no-print{
+      display:block
+    }
+
+    @media print{
+      @page{
+        size:30mm 20mm;
+        margin:0
+      }
+
+      .controls{
+        display:none!important
+      }
+
+      .label-page{
+        padding:0;
+        min-height:20mm
+      }
+
+      .label{
+        width:30mm;
+        height:20mm
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="controls no-print">
+  <button onclick="window.print()">🖨️ Tisk</button>
+  <button onclick="window.close()">Zavřít</button>
+</div>
+
+<div class="label-page">
+  <div id="label" class="label">
+    <div id="qr" class="qr"></div>
+
+    <div class="text">
+      <div id="main" class="main">Načítám…</div>
+      <div id="code" class="code"></div>
+      <div id="under" class="under"></div>
+    </div>
+  </div>
+</div>
+
 <script>
-(async()=>{const p=new URLSearchParams(location.search),code=p.get('code');if(!code){document.getElementById('main').textContent='CHYBÍ KÓD';return}try{const r=await api('searchItem',{code});const i=r.item;document.getElementById('main').textContent=[i.velikost,i.barva,i.cistota].filter(Boolean).join(' ');document.getElementById('code').textContent=i.kod;document.getElementById('under').textContent=i.druh||'';document.getElementById('qr').innerHTML=InventoryQR.toSvg(i.kod,4,2)}catch(e){document.getElementById('main').textContent='CHYBA';document.getElementById('under').textContent=e.message}})();
-</script></body></html>
+(async()=>{
+  const p = new URLSearchParams(location.search);
+  const code = p.get('code');
+
+  if(!code){
+    document.getElementById('main').textContent = 'CHYBÍ KÓD';
+    return;
+  }
+
+  try{
+    const r = await api('searchItem',{code});
+    const i = r.item;
+
+    document.getElementById('main').textContent =
+      [i.velikost,i.barva,i.cistota]
+        .filter(Boolean)
+        .join(' ');
+
+    document.getElementById('code').textContent = i.kod;
+
+    document.getElementById('under').textContent =
+      i.druh || '';
+
+    document.getElementById('qr').innerHTML =
+      InventoryQR.toSvg(i.kod,4,2);
+
+  }catch(e){
+    document.getElementById('main').textContent = 'CHYBA';
+    document.getElementById('under').textContent = e.message;
+  }
+})();
+</script>
+
+</body>
+</html>
