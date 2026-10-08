@@ -1,30 +1,94 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – přihlášení</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js" defer></script></head><body>
-<div class="container"><div class="login"><div class="card">
-  <div class="logo">Sklad materiálu</div><div class="sub">Zlatnická dílna Koneční · V1</div>
-  <div id="status" class="status info">Kontroluji zařízení…</div>
-  <div id="registrationCard" class="hidden">
-    <h2>Registrace zařízení</h2>
-    <p class="muted">Registrační kód musí vytvořit administrátor pro konkrétního uživatele. Platí jen krátce a lze použít jednou.</p>
-    <label for="regCode">Registrační kód</label><input id="regCode" autocomplete="one-time-code" placeholder="např. RG-ABCD-1234">
-    <div class="actions"><button class="primary" id="registerBtn">🔐 Registrovat zařízení</button></div>
-    <div id="regStatus"></div>
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sklad materiálu – přihlášení</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script src="qr-mini.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<div class="container">
+  <div class="login">
+    <div class="card">
+      <div class="logo">Sklad materiálu</div>
+      <div class="sub">Zlatnická dílna Koneční · V1</div>
+
+      <div id="status" class="status info">Kontroluji zařízení…</div>
+
+      <div id="registrationCard" class="hidden">
+        <h2>Registrace zařízení</h2>
+        <p class="muted">Registrační kód musí vytvořit administrátor pro konkrétního uživatele. Platí jen krátce a lze použít jednou.</p>
+        <label for="regCode">Registrační kód</label>
+        <input id="regCode" autocomplete="one-time-code" placeholder="např. RG-ABCD-1234">
+        <div class="actions">
+          <button class="primary" id="registerBtn">🔐 Registrovat zařízení</button>
+        </div>
+        <div id="regStatus"></div>
+      </div>
+
+      <div id="loggedCard" class="hidden center">
+        <div id="loggedText"></div>
+        <div class="actions" style="justify-content:center">
+          <button id="openApp" class="primary">Otevřít sklad</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div id="loggedCard" class="hidden center"><div id="loggedText"></div><div class="actions" style="justify-content:center"><button id="openApp" class="primary">Otevřít sklad</button></div></div>
-</div></div></div>
+</div>
+
 <script>
-(async function(){
-  const status=document.getElementById('status'),reg=document.getElementById('registrationCard'),logged=document.getElementById('loggedCard');
-  try{
-    if(!deviceToken){status.textContent='Toto zařízení není registrované.';reg.classList.remove('hidden');}
-    else{
-      const a=await api('auth');const u=a.user;status.textContent='Zařízení je registrované.';status.className='status ok';logged.classList.remove('hidden');document.getElementById('loggedText').innerHTML=`Přihlášen: <strong>${esc(u.name)}</strong><br><span class="muted">${esc(u.role)}</span>`;
-      document.getElementById('openApp').onclick=()=>go(u.role==='ADMIN'?'admin.html':'worker.html');
+// Důležité: app.js je načtený jako defer, proto veškerý kód,
+// který používá api()/deviceToken/showStatus(), spouštíme až po DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', async () => {
+  const status = document.getElementById('status');
+  const reg = document.getElementById('registrationCard');
+  const logged = document.getElementById('loggedCard');
+  const registerBtn = document.getElementById('registerBtn');
+
+  try {
+    if (!deviceToken) {
+      status.textContent = 'Toto zařízení není registrované.';
+      reg.classList.remove('hidden');
+    } else {
+      const a = await api('auth');
+      const u = a.user;
+      status.textContent = 'Zařízení je registrované.';
+      status.className = 'status ok';
+      logged.classList.remove('hidden');
+      document.getElementById('loggedText').innerHTML =
+        `Přihlášen: <strong>${esc(u.name)}</strong><br><span class="muted">${esc(u.role)}</span>`;
+      document.getElementById('openApp').onclick = () =>
+        go(u.role === 'ADMIN' ? 'admin.html' : 'worker.html');
     }
-  }catch(e){clearAuth();status.textContent='Registrace zařízení je nutná.';status.className='status info';reg.classList.remove('hidden');}
-})();
-document.getElementById('registerBtn').onclick=async()=>{
- const code=document.getElementById('regCode').value.trim(); if(!code){showStatus('regStatus','Zadej registrační kód.','error');return}
- showStatus('regStatus','Registruji zařízení…','info');
- try{const r=await api('register',{registrationCode:code});setLocalToken(r.token);showStatus('regStatus','Hotovo. Přesměrovávám…','ok');setTimeout(()=>go(r.role==='ADMIN'?'admin.html':'worker.html'),150)}catch(e){showStatus('regStatus','Registrace selhala: '+e.message,'error')}
-};
-</script></body></html>
+  } catch (e) {
+    clearAuth();
+    status.textContent = 'Registrace zařízení je nutná.';
+    status.className = 'status info';
+    reg.classList.remove('hidden');
+  }
+
+  registerBtn.addEventListener('click', async () => {
+    const code = document.getElementById('regCode').value.trim();
+    if (!code) {
+      showStatus('regStatus', 'Zadej registrační kód.', 'error');
+      return;
+    }
+    showStatus('regStatus', 'Registruji zařízení…', 'info');
+    registerBtn.disabled = true;
+    try {
+      const r = await api('register', { registrationCode: code });
+      setLocalToken(r.token);
+      showStatus('regStatus', 'Hotovo. Přesměrovávám…', 'ok');
+      setTimeout(() => go(r.role === 'ADMIN' ? 'admin.html' : 'worker.html'), 150);
+    } catch (e) {
+      showStatus('regStatus', 'Registrace selhala: ' + e.message, 'error');
+      registerBtn.disabled = false;
+    }
+  });
+});
+</script>
+</body>
+</html>
