@@ -6,7 +6,7 @@
 <section id="tab-central" class="section">
 <div class="card"><h2>Hledat položku</h2><div class="form-grid"><div><label>Kód</label><input id="centralSearchCode" placeholder="D-0001 / AU-0001"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('centralSearchCode').value=v;centralSearch()})">📷 Skenovat QR</button></div></div><div class="actions"><button class="primary" onclick="centralSearch()">🔎 Hledat</button></div><div id="centralSearchStatus"></div><div id="centralSearchResult"></div></div>
 <div class="grid grid-2"><div class="card"><h2>Nová položka</h2><div class="form-grid"><div><label>Kategorie</label><select id="newCategory"><option>KÁMEN</option><option>KOV</option><option>MATERIÁL</option></select></div><div><label>Druh</label><input id="newType" value="Diamant"></div><div id="stoneSizeField"><label>Velikost</label><input id="newSize" value="1,0 mm"></div><div id="stoneColorField"><label>Barva</label><input id="newColor" value="H"></div><div id="stoneClarityField"><label>Čistota</label><input id="newClarity" value="SI1"></div><div id="metalFinenessField" class="hidden"><label>Ryzost / 1000 <span class="muted">(např. 585)</span></label><input id="newFineness" inputmode="decimal" placeholder="585"></div><div id="metalColorField" class="hidden"><label>Barva kovu</label><select id="newMetalColor"><option>Žluté</option><option>Bílé</option><option>Růžové</option></select></div><div id="metalFormField" class="hidden"><label>Forma</label><input id="newForm" placeholder="drát / plech / granulát / kus…"></div><div id="stoneUnitField"><label>Jednotka</label><input id="newUnit" value="ks" readonly></div><div id="metalUnitField" class="hidden"><label>Jednotka</label><input value="g" readonly></div><div><label>Pozice</label><input id="newPosition" placeholder="Box A1"></div><div><label>Poznámka</label><input id="newNote"></div></div><div id="newCategoryHint" class="muted" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">Položka je definice materiálu. Množství se k ní přidává přes „Příjem materiálu“; stejné vlastnosti nevytvoří novou položku.</div><div class="actions"><button class="good" onclick="createItem()">➕ Vytvořit položku</button></div><div id="createItemStatus"></div></div>
-<div class="card"><h2>Příjem materiálu</h2><div class="form-grid"><div><label>Kód položky</label><input id="receiveCode" onblur="showReceiveMode()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('receiveCode').value=v;showReceiveMode()})">📷 Skenovat QR</button></div><div><label>Množství <span id="receiveQtyHint" class="muted">(ks / g podle položky)</span></label><input id="receiveQty" inputmode="decimal" placeholder="např. 50"></div><div id="receiveCtField"><label>Celkem ct (jen kameny)</label><input id="receiveCt" inputmode="decimal" placeholder="např. 0,250"></div><div id="receiveBatchField" class="hidden"><label>Označení balíčku / šarže</label><input id="receiveBatchLabel" placeholder="např. ZL-002 / 27,7 g"></div><div><label>Poznámka</label><input id="receiveNote"></div></div><div id="receiveModeHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="receiveItem()">📥 Přijmout</button></div><div id="receiveStatus"></div></div></div>
+<div class="card"><h2>Příjem materiálu</h2><div class="form-grid"><div><label>Kód položky</label><input id="receiveCode" onblur="showReceiveMode()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('receiveCode').value=v;showReceiveMode()})">📷 Skenovat QR</button></div><div><label>Množství <span id="receiveQtyHint" class="muted">(ks / g podle položky)</span></label><input id="receiveQty" inputmode="decimal" placeholder="např. 50"></div><div id="receiveCtField"><label>Celkem ct (jen kameny)</label><input id="receiveCt" inputmode="decimal" placeholder="např. 0,250"></div><div><label>Poznámka</label><input id="receiveNote"></div></div><div id="receiveItemInfo"></div><div id="receiveModeHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="receiveItem()">📥 Přijmout</button></div><div id="receiveStatus"></div></div></div>
 <div class="card"><h2>Úprava centrálního stavu</h2><p class="muted">Používej jen pro opravu inventury. Operace se vždy zapíše do historie.</p><div class="form-grid"><div><label>Kód</label><input id="adjustCode" onblur="loadAdjustBatches()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('adjustCode').value=v;loadAdjustBatches()})">📷 Skenovat QR</button></div><div id="adjustBatchField" class="hidden"><label>Šarže pro korekci</label><select id="adjustBatch"><option value="">Vyber šarži</option></select></div><div><label>Změna množství (+ / −)</label><input id="adjustQty" inputmode="decimal"></div><div id="adjustCtField"><label>Změna ct (+ / −, jen kameny)</label><input id="adjustCt" inputmode="decimal"></div><div><label>Důvod</label><input id="adjustNote"></div></div><div id="adjustHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="danger" onclick="adjustItem()">⚠️ Zapsat korekci</button></div><div id="adjustStatus"></div></div>
 <div class="card"><h2>Centrální sklad – seznam</h2><div class="actions"><button class="secondary" onclick="loadCentral()">Obnovit seznam</button></div><div id="centralList">Načítám…</div></div>
 </section>
@@ -56,15 +56,41 @@ function syncNewCategory(){
 
 async function showReceiveMode(){
   const code=val('receiveCode');
-  if(!code){document.getElementById('receiveBatchField').classList.add('hidden');document.getElementById('receiveCtField').classList.remove('hidden');return;}
+  const info=document.getElementById('receiveItemInfo');
+  if(!code){
+    document.getElementById('receiveBatchField').classList.add('hidden');
+    document.getElementById('receiveCtField').classList.remove('hidden');
+    document.getElementById('receiveQtyHint').textContent='(ks / g podle položky)';
+    if(info)info.innerHTML='';
+    document.getElementById('receiveModeHint').textContent='Naskenuj QR kód položky a potom zadej pouze přidávané množství.';
+    return;
+  }
   try{
     const r=await api('searchItem',{code});
-    const metal=r.item.kategorie!=='KÁMEN';
+    const i=r.item;
+    const metal=i.kategorie!=='KÁMEN';
     document.getElementById('receiveCtField').classList.toggle('hidden',metal);
     document.getElementById('receiveBatchField').classList.toggle('hidden',!metal);
     document.getElementById('receiveQtyHint').textContent=metal?'(g)':'(ks)';
-    document.getElementById('receiveModeHint').textContent=metal?('Příjem kovu / materiálu. Hmotnost = množství v g. Každý příjem vytvoří vlastní šarži.'):('Příjem kamene. Celkem ct je volitelné a zachovává se výpočet průměrné ct/ks.');
-  }catch(e){document.getElementById('receiveCtField').classList.remove('hidden');document.getElementById('receiveBatchField').classList.add('hidden');document.getElementById('receiveModeHint').textContent='Kód položky zatím nebyl nalezen.'}
+    if(info){
+      const title=metal
+        ? [i.druh,i.ryzost!==null&&i.ryzost!==undefined?String(i.ryzost)+'/1000':null,i.barva,i.forma].filter(Boolean).join(' · ')
+        : [i.druh,i.velikost,i.barva,i.cistota].filter(Boolean).join(' · ');
+      const state=metal
+        ? num(i.pocet)+' g'
+        : num(i.pocet)+' ks'+(Number(i.celkemCt)>0?' · '+num(i.celkemCt)+' ct':'');
+      info.innerHTML='<div class="status info" style="margin:12px 0 0"><strong>'+esc(i.kod)+'</strong> · '+esc(i.kategorie)+'<br>'+esc(title||i.druh||i.kod)+'<br>Aktuální stav: <strong>'+state+'</strong></div>';
+    }
+    document.getElementById('receiveModeHint').textContent=metal
+      ? 'Přidej pouze počet gramů. Systém je připíše do stejné položky a současně založí interní šarži tohoto příjmu.'
+      : 'Přidej počet kusů a případně celkem ct. Systém vše připíše do stejné položky a zachová výpočet průměrné ct/ks.';
+  }catch(e){
+    document.getElementById('receiveCtField').classList.remove('hidden');
+    document.getElementById('receiveBatchField').classList.add('hidden');
+    document.getElementById('receiveQtyHint').textContent='(ks / g podle položky)';
+    if(info)info.innerHTML='<div class="status error" style="margin:12px 0 0">Kód položky nebyl nalezen. Nejprve položku vytvoř.</div>';
+    document.getElementById('receiveModeHint').textContent='';
+  }
 }
 
 async function loadBatchesForCode(code,selectId,hintId){
@@ -110,15 +136,29 @@ function renderMetalDetail(m){
 
 async function centralSearch(){const code=document.getElementById('centralSearchCode').value.trim();if(!code){showStatus('centralSearchStatus','Zadej kód.','error');return}try{const r=await api('searchItem',{code});document.getElementById('centralSearchResult').innerHTML=renderCentralItem(r);showStatus('centralSearchStatus','Nalezeno.','ok')}catch(e){showStatus('centralSearchStatus','Chyba: '+e.message,'error')}}
 async function createItem(){
+  let printWindow=null;
   try{
+    // Popup otevřeme ještě před await, aby ho prohlížeč neblokoval.
+    printWindow=window.open('about:blank','_blank');
     const category=val('newCategory');
     const r=await api('createItem',{category,type:val('newType'),size:val('newSize'),color:val('newColor'),clarity:val('newClarity'),fineness:nOrNull('newFineness'),metalColor:val('newMetalColor'),form:val('newForm'),position:val('newPosition'),note:val('newNote')});
-    showStatus('createItemStatus','Vytvořeno '+r.kod+'.','ok');
+    const url='print-label.html?code='+encodeURIComponent(r.kod);
+    const el=document.getElementById('createItemStatus');
+    el.className='status ok';
+    el.innerHTML='Vytvořeno <strong>'+esc(r.kod)+'</strong>. <button id="printNewItemQr" class="small secondary">🖨️ Vytisknout QR</button>';
+    document.getElementById('printNewItemQr').onclick=()=>window.open(url,'_blank');
     document.getElementById('centralSearchCode').value=r.kod;
     centralSearch();
     loadCentral();
     syncNewCategory();
+    if(printWindow && !printWindow.closed){
+      printWindow.location.href=url;
+    }else{
+      el.innerHTML='Vytvořeno <strong>'+esc(r.kod)+'</strong>. Prohlížeč zablokoval tiskové okno. <button id="printNewItemQr" class="small secondary">🖨️ Vytisknout QR</button>';
+      document.getElementById('printNewItemQr').onclick=()=>window.open(url,'_blank');
+    }
   }catch(e){
+    if(printWindow && !printWindow.closed)printWindow.close();
     const msg=e.message==='DUPLICATE_ITEM'
       ?'Tato položka už existuje. Použij „Příjem materiálu“ a přidej k ní množství.'
       :'Chyba: '+e.message;
@@ -127,7 +167,7 @@ async function createItem(){
 }
 async function receiveItem(){
   try{
-    const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:document.getElementById('receiveCtField').classList.contains('hidden')?null:nOrNull('receiveCt'),batchLabel:val('receiveBatchLabel'),note:val('receiveNote')});
+    const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:document.getElementById('receiveCtField').classList.contains('hidden')?null:nOrNull('receiveCt'),note:val('receiveNote')});
     showStatus('receiveStatus','Příjem zapsán. Stav: '+num(r.item.pocet)+' '+r.item.jednotka+(r.batchId?' · Šarže '+r.batchId:''),'ok');
     loadCentral();loadOverview();showReceiveMode();
   }catch(e){showStatus('receiveStatus','Chyba: '+e.message,'error')}
