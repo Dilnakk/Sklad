@@ -2,17 +2,17 @@
 <header><div class="header-inner"><div class="brand"><h1>Sklad materiálu</h1><p id="who">ADMIN</p></div><div class="top-actions"><span id="conn" class="badge">Kontrola…</span><button class="small secondary" onclick="clearAuth();go('index.html')">Odhlásit zařízení</button></div></div></header>
 <main class="container">
 <div class="nav" id="nav"><button class="active" data-tab="overview">🏠 Přehled</button><button data-tab="central">📦 Centrální sklad</button><button data-tab="workers">👩‍🔧 U zlatnic</button><button data-tab="external">🏭 Externí zpracování</button><button data-tab="companies">🏢 U firem</button><button data-tab="history">📋 Historie</button><button data-tab="users">👥 Uživatelé</button><button data-tab="devices">📱 Zařízení</button><button data-tab="registration">🔐 Registrace</button></div>
-<section id="tab-overview" class="section active"><div class="grid grid-4" id="stats"></div><div class="card"><h2>Aktuální stav</h2><div id="overviewTable">Načítám…</div></div></section>
+<section id="tab-overview" class="section active"><div class="grid grid-4" id="stats"></div><div class="card"><h2>Aktuální stav</h2><div id="overviewTable">Načítám…</div><details style="margin-top:18px"><summary style="cursor:pointer;font-weight:750">⚙️ Podrobný stav kovů</summary><div id="metalDetail" style="margin-top:14px">Načítám…</div></details></div></section>
 <section id="tab-central" class="section">
 <div class="card"><h2>Hledat položku</h2><div class="form-grid"><div><label>Kód</label><input id="centralSearchCode" placeholder="D-0001 / AU-0001"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('centralSearchCode').value=v;centralSearch()})">📷 Skenovat QR</button></div></div><div class="actions"><button class="primary" onclick="centralSearch()">🔎 Hledat</button></div><div id="centralSearchStatus"></div><div id="centralSearchResult"></div></div>
-<div class="grid grid-2"><div class="card"><h2>Nová položka</h2><div class="form-grid"><div><label>Kategorie</label><select id="newCategory"><option>KÁMEN</option><option>KOV</option><option>MATERIÁL</option></select></div><div><label>Druh</label><input id="newType" value="Diamant"></div><div><label>Velikost</label><input id="newSize" value="1,0 mm"></div><div><label>Barva</label><input id="newColor" value="H"></div><div><label>Čistota</label><input id="newClarity" value="SI1"></div><div><label>Jednotka</label><input id="newUnit" value="ks"></div><div><label>Pozice</label><input id="newPosition" placeholder="Box A1"></div><div><label>Poznámka</label><input id="newNote"></div></div><div class="actions"><button class="good" onclick="createItem()">➕ Vytvořit položku</button></div><div id="createItemStatus"></div></div>
-<div class="card"><h2>Příjem materiálu</h2><div class="form-grid"><div><label>Kód položky</label><div style="display:flex;gap:8px"><input id="receiveCode" style="flex:1"><button type="button" class="small secondary" onclick="scanToInput('receiveCode')">📷</button></div></div><div><label>Množství</label><input id="receiveQty" inputmode="decimal" placeholder="např. 50"></div><div><label>Celkem ct (jen kameny)</label><input id="receiveCt" inputmode="decimal" placeholder="např. 0,250"></div><div><label>Poznámka</label><input id="receiveNote"></div></div><div class="actions"><button class="good" onclick="receiveItem()">📥 Přijmout</button></div><div id="receiveStatus"></div></div></div>
-<div class="card"><h2>Úprava centrálního stavu</h2><p class="muted">Používej jen pro opravu inventury. Operace se vždy zapíše do historie.</p><div class="form-grid"><div><label>Kód</label><div style="display:flex;gap:8px"><input id="adjustCode" style="flex:1"><button type="button" class="small secondary" onclick="scanToInput('adjustCode')">📷</button></div></div><div><label>Změna množství (+ / −)</label><input id="adjustQty" inputmode="decimal"></div><div><label>Změna ct (+ / −, jen kameny)</label><input id="adjustCt" inputmode="decimal"></div><div><label>Důvod</label><input id="adjustNote"></div></div><div class="actions"><button class="danger" onclick="adjustItem()">⚠️ Zapsat korekci</button></div><div id="adjustStatus"></div></div>
+<div class="grid grid-2"><div class="card"><h2>Nová položka</h2><div class="form-grid"><div><label>Kategorie</label><select id="newCategory"><option>KÁMEN</option><option>KOV</option><option>MATERIÁL</option></select></div><div><label>Druh</label><input id="newType" value="Diamant"></div><div id="stoneSizeField"><label>Velikost</label><input id="newSize" value="1,0 mm"></div><div id="stoneColorField"><label>Barva</label><input id="newColor" value="H"></div><div id="stoneClarityField"><label>Čistota</label><input id="newClarity" value="SI1"></div><div id="metalFinenessField" class="hidden"><label>Ryzost / 1000 <span class="muted">(např. 585)</span></label><input id="newFineness" inputmode="decimal" placeholder="585"></div><div id="metalColorField" class="hidden"><label>Barva kovu</label><select id="newMetalColor"><option>Žluté</option><option>Bílé</option><option>Růžové</option></select></div><div id="metalFormField" class="hidden"><label>Forma</label><input id="newForm" placeholder="drát / plech / granulát / kus…"></div><div id="stoneUnitField"><label>Jednotka</label><input id="newUnit" value="ks" readonly></div><div id="metalUnitField" class="hidden"><label>Jednotka</label><input value="g" readonly></div><div><label>Pozice</label><input id="newPosition" placeholder="Box A1"></div><div><label>Poznámka</label><input id="newNote"></div></div><div id="newCategoryHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="createItem()">➕ Vytvořit položku</button></div><div id="createItemStatus"></div></div>
+<div class="card"><h2>Příjem materiálu</h2><div class="form-grid"><div><label>Kód položky</label><input id="receiveCode" onblur="showReceiveMode()"></div><div><label>Množství <span id="receiveQtyHint" class="muted">(ks / g podle položky)</span></label><input id="receiveQty" inputmode="decimal" placeholder="např. 50"></div><div id="receiveCtField"><label>Celkem ct (jen kameny)</label><input id="receiveCt" inputmode="decimal" placeholder="např. 0,250"></div><div id="receiveBatchField" class="hidden"><label>Označení balíčku / šarže</label><input id="receiveBatchLabel" placeholder="např. ZL-002 / 27,7 g"></div><div><label>Poznámka</label><input id="receiveNote"></div></div><div id="receiveModeHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="receiveItem()">📥 Přijmout</button></div><div id="receiveStatus"></div></div></div>
+<div class="card"><h2>Úprava centrálního stavu</h2><p class="muted">Používej jen pro opravu inventury. Operace se vždy zapíše do historie.</p><div class="form-grid"><div><label>Kód</label><input id="adjustCode" onblur="loadAdjustBatches()"></div><div id="adjustBatchField" class="hidden"><label>Šarže pro korekci</label><select id="adjustBatch"><option value="">Vyber šarži</option></select></div><div><label>Změna množství (+ / −)</label><input id="adjustQty" inputmode="decimal"></div><div id="adjustCtField"><label>Změna ct (+ / −, jen kameny)</label><input id="adjustCt" inputmode="decimal"></div><div><label>Důvod</label><input id="adjustNote"></div></div><div id="adjustHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="danger" onclick="adjustItem()">⚠️ Zapsat korekci</button></div><div id="adjustStatus"></div></div>
 <div class="card"><h2>Centrální sklad – seznam</h2><div class="actions"><button class="secondary" onclick="loadCentral()">Obnovit seznam</button></div><div id="centralList">Načítám…</div></div>
 </section>
 <section id="tab-workers" class="section"><div class="card"><h2>Materiál u zlatnic</h2><div class="actions"><button class="secondary" onclick="loadWorkers()">Obnovit</button></div><div id="workersList">Načítám…</div></div></section>
-<section id="tab-external" class="section"><div class="grid grid-2"><div class="card"><h2>Nová externí zakázka</h2><div class="form-grid"><div><label>Firma</label><select id="jobCompany"></select></div><div><label>Vstupní kód</label><input id="jobInputCode"></div><div><label>Výstupní kód</label><input id="jobOutputCode" placeholder="může být stejný"></div><div><label>Odesílané množství</label><input id="jobQty" inputmode="decimal"></div><div><label>Očekávaná ztráta % (volitelně)</label><input id="jobLoss" inputmode="decimal" placeholder="např. 10"></div><div><label>Typ zpracování</label><input id="jobType" placeholder="např. řetízek"></div><div class="full"><label>Poznámka</label><textarea id="jobNote"></textarea></div></div><div class="actions"><button class="primary" onclick="createJob()">🏭 Odeslat firmě</button></div><div id="jobStatus"></div></div>
-<div class="card"><h2>Vrácení z externí zakázky</h2><div class="form-grid"><div><label>ID zakázky</label><input id="returnJobId" placeholder="EX-0001"></div><div><label>Vrácené množství</label><input id="returnQty" inputmode="decimal"></div><div><label>Výstupní kód</label><input id="returnOutputCode"></div><div><label>Poznámka</label><input id="returnNote"></div></div><div class="actions"><button class="good" onclick="returnJob()">📥 Přijmout návrat</button></div><div id="returnStatus"></div></div></div>
+<section id="tab-external" class="section"><div class="grid grid-2"><div class="card"><h2>Nová externí zakázka</h2><div class="form-grid"><div><label>Firma</label><select id="jobCompany"></select></div><div><label>Vstupní kód</label><input id="jobInputCode" onblur="loadJobBatches()"></div><div id="jobBatchField" class="hidden"><label>Konkrétní balíček / šarže</label><select id="jobBatch"><option value="">Vyber šarži</option></select></div><div><label>Výstupní kód</label><input id="jobOutputCode" placeholder="může být stejný"></div><div><label>Odesílané množství</label><input id="jobQty" inputmode="decimal"></div><div><label>Očekávaná ztráta % (volitelně)</label><input id="jobLoss" inputmode="decimal" placeholder="např. 10"></div><div><label>Typ zpracování</label><input id="jobType" placeholder="např. řetízek"></div><div class="full"><label>Poznámka</label><textarea id="jobNote"></textarea></div></div><div id="jobBatchHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="primary" onclick="createJob()">🏭 Odeslat firmě</button></div><div id="jobStatus"></div></div>
+<div class="card"><h2>Vrácení z externí zakázky</h2><div class="form-grid"><div><label>ID zakázky</label><input id="returnJobId" placeholder="EX-0001"></div><div><label>Vrácené množství</label><input id="returnQty" inputmode="decimal"></div><div><label>Výstupní kód</label><input id="returnOutputCode"></div><div><label>Poznámka</label><input id="returnNote"></div></div><label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input id="returnClose" type="checkbox" style="width:auto"> Uzavřít zakázku po tomto návratu (zbytek bude zaevidován jako skutečná ztráta)</label><div class="actions"><button class="good" onclick="returnJob()">📥 Přijmout návrat</button></div><div id="returnStatus"></div></div></div>
 <div class="card"><h2>Zakázky</h2><div class="actions"><button class="secondary" onclick="loadJobs()">Obnovit</button></div><div id="jobsList">Načítám…</div></div></section>
 <section id="tab-companies" class="section"><div class="grid grid-2"><div class="card"><h2>Nová firma</h2><div><label>Název</label><input id="companyName"></div><div class="actions"><button class="good" onclick="createCompany()">➕ Přidat firmu</button></div><div id="companyStatus"></div></div><div class="card"><h2>Inventura u firmy</h2><div class="form-grid"><div><label>Firma</label><select id="checkCompany"></select></div><div><label>Kód položky</label><input id="checkCode"></div><div><label>Fyzicky zjištěno</label><input id="checkQty" inputmode="decimal"></div><div><label>Poznámka</label><input id="checkNote"></div></div><div class="actions"><button class="danger" onclick="externalCheck()">⚖️ Porovnat a zapsat rozdíl</button></div><div id="checkStatus"></div></div></div><div class="card"><h2>Materiál u firem</h2><div class="actions"><button class="secondary" onclick="loadCompanyBalances()">Obnovit</button></div><div id="companyBalances">Načítám…</div></div></section>
 <section id="tab-history" class="section"><div class="card"><h2>Historie pohybů</h2><div class="actions"><button class="secondary" onclick="loadHistory()">Obnovit</button></div><div id="historyList">Načítám…</div></div></section>
@@ -22,22 +22,140 @@
 </main>
 <script>
 let me=null, users=[], companies=[];
-function scanToInput(id){openScanner(v=>{const el=document.getElementById(id);if(!el)return;el.value=v;el.focus();});}
-function itemText(i){let p=[];if(i.druh)p.push(i.druh);if(i.velikost)p.push(i.velikost);if(i.barva)p.push(i.barva);if(i.cistota)p.push(i.cistota);return p.join(' · ')}
-function renderCentralItem(r){if(!r||!r.item)return '<div class="error-box">Položka nebyla nalezena.</div>';const i=r.item;return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · ${esc(i.kategorie)} · ${esc(i.pozice||'—')}</div><div class="grid grid-3" style="margin-top:12px"><div><div class="muted">Stav</div><div class="qty">${num(i.pocet)} ${esc(i.jednotka)}</div></div><div><div class="muted">Celkem ct</div><div class="qty">${Number(i.celkemCt)>0?num(i.celkemCt):'—'}</div></div><div><div class="muted">Průměr ct/ks</div><div class="qty">${Number(i.celkemCt)>0&&Number(i.pocet)>0?num(Number(i.celkemCt)/Number(i.pocet),4):'—'}</div></div></div><div class="actions"><button class="small secondary" onclick="window.open('print-label.html?code=${encodeURIComponent(i.kod)}','_blank')">🖨️ Tisk štítku</button></div></div>`}
+function itemText(i){
+  const p=[];
+  if(i.druh)p.push(i.druh);
+  if(i.kategorie==='KÁMEN'){
+    if(i.velikost)p.push(i.velikost);
+    if(i.barva)p.push(i.barva);
+    if(i.cistota)p.push(i.cistota);
+  }else{
+    if(i.ryzost)p.push(i.ryzost+'/1000');
+    if(i.barva)p.push(i.barva);
+    if(i.forma)p.push(i.forma);
+  }
+  return p.join(' · ');
+}
+function renderCentralItem(r){
+  if(!r||!r.item)return '<div class="error-box">Položka nebyla nalezena.</div>';
+  const i=r.item;
+  const metal=i.kategorie!=='KÁMEN';
+  const details=metal?`<div class="grid grid-3" style="margin-top:12px"><div><div class="muted">Hmotnost</div><div class="qty">${num(i.pocet)} g</div></div><div><div class="muted">Čisté Au</div><div class="qty">${i.cisteAuG===null?'—':num(i.cisteAuG,3)+' g'}</div></div><div><div class="muted">14k ekvivalent</div><div class="qty">${i.ekv14kG===null?'—':num(i.ekv14kG,3)+' g'}</div></div></div>`:`<div class="grid grid-3" style="margin-top:12px"><div><div class="muted">Stav</div><div class="qty">${num(i.pocet)} ${esc(i.jednotka)}</div></div><div><div class="muted">Celkem ct</div><div class="qty">${Number(i.celkemCt)>0?num(i.celkemCt):'—'}</div></div><div><div class="muted">Průměr ct/ks</div><div class="qty">${Number(i.celkemCt)>0&&Number(i.pocet)>0?num(Number(i.celkemCt)/Number(i.pocet),4):'—'}</div></div></div>`;
+  return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · ${esc(i.kategorie)} · ${esc(i.pozice||'—')}</div>${metal&&i.ryzost===null?'<div class="muted" style="margin-top:8px">Ryzost zatím není určena.</div>':''}${details}<div class="actions"><button class="small secondary" onclick="window.open('print-label.html?code=${encodeURIComponent(i.kod)}','_blank')">🖨️ Tisk štítku</button></div></div>`;
+}
+
+function syncNewCategory(){
+  const cat=val('newCategory');
+  const stone=cat==='KÁMEN';
+  ['stoneSizeField','stoneColorField','stoneClarityField','stoneUnitField'].forEach(id=>document.getElementById(id).classList.toggle('hidden',!stone));
+  ['metalFinenessField','metalColorField','metalFormField','metalUnitField'].forEach(id=>document.getElementById(id).classList.toggle('hidden',stone));
+  document.getElementById('newCategoryHint').textContent=stone?'Kámen: velikost, barva, čistota, počet kusů a celkem ct.':'KOV: hmotnost v gramech a ryzost jsou povinné. MATERIÁL: hmotnost v gramech, ryzost může být neznámá.';
+  if(stone){document.getElementById('newUnit').value='ks';if(!val('newType'))document.getElementById('newType').value='Diamant';}
+  else{if(!val('newType')||val('newType')==='Diamant')document.getElementById('newType').value=cat==='KOV'?'Zlato':'Materiál';}
+}
+
+async function showReceiveMode(){
+  const code=val('receiveCode');
+  if(!code){document.getElementById('receiveBatchField').classList.add('hidden');document.getElementById('receiveCtField').classList.remove('hidden');return;}
+  try{
+    const r=await api('searchItem',{code});
+    const metal=r.item.kategorie!=='KÁMEN';
+    document.getElementById('receiveCtField').classList.toggle('hidden',metal);
+    document.getElementById('receiveBatchField').classList.toggle('hidden',!metal);
+    document.getElementById('receiveQtyHint').textContent=metal?'(g)':'(ks)';
+    document.getElementById('receiveModeHint').textContent=metal?('Příjem kovu / materiálu. Hmotnost = množství v g. Každý příjem vytvoří vlastní šarži.'):('Příjem kamene. Celkem ct je volitelné a zachovává se výpočet průměrné ct/ks.');
+  }catch(e){document.getElementById('receiveCtField').classList.remove('hidden');document.getElementById('receiveBatchField').classList.add('hidden');document.getElementById('receiveModeHint').textContent='Kód položky zatím nebyl nalezen.'}
+}
+
+async function loadBatchesForCode(code,selectId,hintId){
+  const r=await api('listBatches',{code});
+  const select=document.getElementById(selectId);
+  const rows=r.rows||[];
+  select.innerHTML='<option value="">Vyber šarži</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.id)} · ${esc(x.label)} · ${num(x.balance)} ${esc(x.unit)}</option>`).join('');
+  if(hintId)document.getElementById(hintId).textContent=rows.length?'K dispozici '+rows.length+' aktivních šarží.':'Pro tuto položku není žádná dostupná šarže.';
+  return rows;
+}
+
+async function loadJobBatches(){
+  const code=val('jobInputCode');
+  const field=document.getElementById('jobBatchField');
+  if(!code){field.classList.add('hidden');document.getElementById('jobBatchHint').textContent='';return;}
+  try{
+    const item=(await api('searchItem',{code})).item;
+    const metal=item.kategorie!=='KÁMEN';
+    field.classList.toggle('hidden',!metal);
+    if(metal)await loadBatchesForCode(code,'jobBatch','jobBatchHint');else document.getElementById('jobBatchHint').textContent='U kamene se šarže nevybírá.';
+  }catch(e){field.classList.add('hidden');document.getElementById('jobBatchHint').textContent='Kód položky nebyl nalezen.'}
+}
+
+async function loadAdjustBatches(){
+  const code=val('adjustCode');
+  if(!code){document.getElementById('adjustBatchField').classList.add('hidden');document.getElementById('adjustCtField').classList.remove('hidden');return;}
+  try{
+    const item=(await api('searchItem',{code})).item;
+    const metal=item.kategorie!=='KÁMEN';
+    document.getElementById('adjustBatchField').classList.toggle('hidden',!metal);
+    document.getElementById('adjustCtField').classList.toggle('hidden',metal);
+    document.getElementById('adjustHint').textContent=metal?'U kovu/materiálu musí záporná korekce určit konkrétní šarži. Kladná korekce bez výběru vytvoří novou korekční šarži.':'U kamene se šarže nepoužívá.';
+    if(metal)await loadBatchesForCode(code,'adjustBatch','adjustHint');
+  }catch(e){document.getElementById('adjustBatchField').classList.add('hidden');document.getElementById('adjustCtField').classList.remove('hidden');document.getElementById('adjustHint').textContent='Kód položky nebyl nalezen.'}
+}
+
+function renderMetalDetail(m){
+  const t=m.totals||{};
+  const rows=(m.rows||[]).map(x=>`<tr><td>${esc(x.location)}</td><td>${esc(x.druh)}</td><td><strong>${esc(x.code)}</strong></td><td>${x.ryzost===null?'Neznámá':num(x.ryzost)+'/1000'}</td><td>${esc(x.barva||'—')}</td><td>${esc(x.forma||'—')}</td><td>${num(x.grams,3)} g</td><td>${x.pureAuG===null?'—':num(x.pureAuG,3)+' g'}</td><td>${x.equivalent14kG===null?'—':num(x.equivalent14kG,3)+' g'}</td></tr>`).join('');
+  const unknown=t.unknownAu>0?`<div class="muted" style="margin-top:10px">Zlato s neznámou ryzostí: ${num(t.unknownAu,3)} g. Čisté Au a 14k ekvivalent nelze zatím vypočítat.</div>`:'';
+  document.getElementById('metalDetail').innerHTML=`<div class="muted" style="margin-bottom:10px">Součet evidovaného kovu/materiálu: centrální sklad + materiál u zlatnic + otevřené zůstatky u firem.</div><div class="table-wrap"><table class="table"><thead><tr><th>Umístění</th><th>Druh</th><th>Kód</th><th>Ryzost</th><th>Barva</th><th>Forma</th><th>Hmotnost</th><th>Čisté Au</th><th>14k ekvivalent</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="muted">V evidenci zatím není žádný kov / materiál s hmotností.</td></tr>'}</tbody></table></div><div class="muted" style="margin-top:10px">Celkem fyzicky: ${num(t.grams,3)} g · známé čisté Au: ${num(t.pureAuG,3)} g · známý 14k ekvivalent: ${num(t.equivalent14kG,3)} g</div>${unknown}`;
+}
+
 async function centralSearch(){const code=document.getElementById('centralSearchCode').value.trim();if(!code){showStatus('centralSearchStatus','Zadej kód.','error');return}try{const r=await api('searchItem',{code});document.getElementById('centralSearchResult').innerHTML=renderCentralItem(r);showStatus('centralSearchStatus','Nalezeno.','ok')}catch(e){showStatus('centralSearchStatus','Chyba: '+e.message,'error')}}
-async function createItem(){try{const r=await api('createItem',{category:val('newCategory'),type:val('newType'),size:val('newSize'),color:val('newColor'),clarity:val('newClarity'),unit:val('newUnit'),position:val('newPosition'),note:val('newNote')});showStatus('createItemStatus','Vytvořeno '+r.kod+'.','ok');document.getElementById('centralSearchCode').value=r.kod;centralSearch();loadCentral()}catch(e){showStatus('createItemStatus','Chyba: '+e.message,'error')}}
-async function receiveItem(){try{const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:nOrNull('receiveCt'),note:val('receiveNote')});showStatus('receiveStatus','Příjem zapsán. Stav: '+num(r.item.pocet)+' '+r.item.jednotka,'ok');loadCentral();loadOverview()}catch(e){showStatus('receiveStatus','Chyba: '+e.message,'error')}}
-async function adjustItem(){try{const r=await api('adjust',{code:val('adjustCode'),qtyDelta:n('adjustQty'),ctDelta:nOrNull('adjustCt'),note:val('adjustNote')});showStatus('adjustStatus','Korekce zapsána. Nový stav: '+num(r.item.pocet)+' '+r.item.jednotka,'ok');loadCentral();loadOverview()}catch(e){showStatus('adjustStatus','Chyba: '+e.message,'error')}}
+async function createItem(){
+  try{
+    const category=val('newCategory');
+    const r=await api('createItem',{category,type:val('newType'),size:val('newSize'),color:val('newColor'),clarity:val('newClarity'),fineness:nOrNull('newFineness'),metalColor:val('newMetalColor'),form:val('newForm'),position:val('newPosition'),note:val('newNote')});
+    showStatus('createItemStatus','Vytvořeno '+r.kod+'.','ok');
+    document.getElementById('centralSearchCode').value=r.kod;
+    centralSearch();
+    loadCentral();
+    syncNewCategory();
+  }catch(e){showStatus('createItemStatus','Chyba: '+e.message,'error')}
+}
+async function receiveItem(){
+  try{
+    const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:document.getElementById('receiveCtField').classList.contains('hidden')?null:nOrNull('receiveCt'),batchLabel:val('receiveBatchLabel'),note:val('receiveNote')});
+    showStatus('receiveStatus','Příjem zapsán. Stav: '+num(r.item.pocet)+' '+r.item.jednotka+(r.batchId?' · Šarže '+r.batchId:''),'ok');
+    loadCentral();loadOverview();showReceiveMode();
+  }catch(e){showStatus('receiveStatus','Chyba: '+e.message,'error')}
+}
+async function adjustItem(){
+  try{
+    const r=await api('adjust',{code:val('adjustCode'),qtyDelta:n('adjustQty'),ctDelta:document.getElementById('adjustCtField').classList.contains('hidden')?null:nOrNull('adjustCt'),batchId:val('adjustBatch'),note:val('adjustNote')});
+    showStatus('adjustStatus','Korekce zapsána. Nový stav: '+num(r.item.pocet)+' '+r.item.jednotka+(r.batchId?' · Šarže '+r.batchId:''),'ok');
+    loadCentral();loadOverview();loadAdjustBatches();
+  }catch(e){showStatus('adjustStatus','Chyba: '+e.message,'error')}
+}
 async function loadCentral(){
   try{
     const r=await api('listCentral');
-    const rows=r.rows.map(i=>`<tr><td><strong>${esc(i.kod)}</strong></td><td>${esc(i.kategorie)}</td><td>${esc(itemText(i))}</td><td>${num(i.pocet)} ${esc(i.jednotka)}${Number(i.celkemCt)>0?' · '+num(i.celkemCt)+' ct':''}</td><td>${esc(i.pozice||'—')}</td><td><button class="small secondary" onclick="window.open('print-label.html?code=${encodeURIComponent(i.kod)}','_blank')">Štítek</button></td></tr>`).join('');
+    const rows=r.rows.map(i=>`<tr><td><strong>${esc(i.kod)}</strong></td><td>${esc(i.kategorie)}</td><td>${esc(itemText(i))}</td><td>${i.kategorie==='KÁMEN'?num(i.pocet)+' '+esc(i.jednotka)+(Number(i.celkemCt)>0?' · '+num(i.celkemCt)+' ct':''):num(i.pocet)+' g'}</td><td>${esc(i.pozice||'—')}</td><td><button class="small secondary" onclick="window.open('print-label.html?code=${encodeURIComponent(i.kod)}','_blank')">Štítek</button></td></tr>`).join('');
     document.getElementById('centralList').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Kategorie</th><th>Položka</th><th>Stav</th><th>Pozice</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }catch(e){document.getElementById('centralList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
-async function loadOverview(){try{const r=await api('summary');document.getElementById('stats').innerHTML=`<div class="stat"><div class="value">${num(r.central.totalLines)}</div><div class="label">Položek v centrálním skladu</div></div><div class="stat"><div class="value">${num(r.personal.totalRows)}</div><div class="label">Aktivních osobních stavů</div></div><div class="stat"><div class="value">${num(r.external.totalRows)}</div><div class="label">Aktivních externích zůstatků</div></div><div class="stat"><div class="value">${num(r.users.active)}</div><div class="label">Aktivních uživatelů</div></div>`;document.getElementById('overviewTable').innerHTML=summaryTable(r)}catch(e){document.getElementById('overviewTable').innerHTML='<div class="error-box">'+esc(e.message)+'</div>'}}
-function summaryTable(r){let a=[];(r.central.byCategory||[]).forEach(x=>a.push(`<tr><td>Centrální</td><td>${esc(x.category)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));(r.personal.byUser||[]).forEach(x=>a.push(`<tr><td>U zlatnic</td><td>${esc(x.name)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));(r.external.byCompany||[]).forEach(x=>a.push(`<tr><td>U firem</td><td>${esc(x.company)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));return '<div class="table-wrap"><table class="table"><thead><tr><th>Umístění</th><th>Skupina</th><th>Řádky</th><th>Množství</th></tr></thead><tbody>'+a.join('')+'</tbody></table></div>'}
+async function loadOverview(){
+  try{
+    const r=await api('summary');
+    document.getElementById('stats').innerHTML=`<div class="stat"><div class="value">${num(r.central.totalLines)}</div><div class="label">Položek v centrálním skladu</div></div><div class="stat"><div class="value">${num(r.personal.totalRows)}</div><div class="label">Aktivních osobních stavů</div></div><div class="stat"><div class="value">${num(r.external.totalRows)}</div><div class="label">Aktivních externích zůstatků</div></div><div class="stat"><div class="value">${num(r.users.active)}</div><div class="label">Aktivních uživatelů</div></div>`;
+    document.getElementById('overviewTable').innerHTML=summaryTable(r);
+    renderMetalDetail(r.metal||{rows:[],totals:{grams:0,pureAuG:0,equivalent14kG:0,unknownAu:0}});
+  }catch(e){document.getElementById('overviewTable').innerHTML='<div class="error-box">'+esc(e.message)+'</div>';document.getElementById('metalDetail').innerHTML='<div class="error-box">'+esc(e.message)+'</div>'}
+}
+function summaryTable(r){
+  let a=[];
+  (r.central.byCategory||[]).forEach(x=>a.push(`<tr><td>Centrální</td><td>${esc(x.category)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));
+  (r.personal.byUser||[]).forEach(x=>a.push(`<tr><td>U zlatnic</td><td>${esc(x.name)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));
+  (r.external.byCompany||[]).forEach(x=>a.push(`<tr><td>U firem</td><td>${esc(x.company)}</td><td>${num(x.rows)}</td><td>${num(x.qty)} ${esc(x.unit||'')}</td></tr>`));
+  return '<div class="table-wrap"><table class="table"><thead><tr><th>Umístění</th><th>Skupina</th><th>Řádky</th><th>Množství</th></tr></thead><tbody>'+a.join('')+'</tbody></table></div>';
+}
 async function loadWorkers(){
   try{
     const r=await api('listPersonal');
@@ -47,17 +165,27 @@ async function loadWorkers(){
 }
 async function loadCompanies(){const r=await api('listCompanies');companies=r.rows;const sels=['jobCompany','checkCompany'];sels.forEach(id=>{document.getElementById(id).innerHTML=companies.filter(x=>x.active).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')})}
 async function createCompany(){try{const r=await api('createCompany',{name:val('companyName')});showStatus('companyStatus','Firma '+r.name+' vytvořena.','ok');document.getElementById('companyName').value='';await loadCompanies()}catch(e){showStatus('companyStatus','Chyba: '+e.message,'error')}}
-async function createJob(){try{const r=await api('createExternalJob',{companyId:val('jobCompany'),inputCode:val('jobInputCode'),outputCode:val('jobOutputCode'),qty:n('jobQty'),expectedLossPct:nOrNull('jobLoss'),processType:val('jobType'),note:val('jobNote')});showStatus('jobStatus','Zakázka '+r.jobId+' vytvořena. Odesláno: '+num(r.qty),'ok');loadJobs();loadOverview()}catch(e){showStatus('jobStatus','Chyba: '+e.message,'error')}}
-async function returnJob(){try{const r=await api('returnExternal',{jobId:val('returnJobId'),qty:n('returnQty'),outputCode:val('returnOutputCode'),note:val('returnNote')});showStatus('returnStatus','Návrat zapsán. Skutečná ztráta: '+num(r.actualLoss)+' ('+num(r.actualLossPct,2)+' %).','ok');loadJobs();loadCompanyBalances();loadOverview()}catch(e){showStatus('returnStatus','Chyba: '+e.message,'error')}}
+async function createJob(){
+  try{
+    const r=await api('createExternalJob',{companyId:val('jobCompany'),inputCode:val('jobInputCode'),batchId:val('jobBatch'),outputCode:val('jobOutputCode'),qty:n('jobQty'),expectedLossPct:nOrNull('jobLoss'),processType:val('jobType'),note:val('jobNote')});
+    showStatus('jobStatus','Zakázka '+r.jobId+' vytvořena. Odesláno: '+num(r.qty)+(r.batchId?' ze šarže '+r.batchId:''),'ok');loadJobs();loadCompanyBalances();loadOverview();loadJobBatches();
+  }catch(e){showStatus('jobStatus','Chyba: '+e.message,'error')}
+}
+async function returnJob(){
+  try{
+    const r=await api('returnExternal',{jobId:val('returnJobId'),qty:n('returnQty'),outputCode:val('returnOutputCode'),closeJob:document.getElementById('returnClose').checked,note:val('returnNote')});
+    showStatus('returnStatus','Návrat zapsán. Skutečná ztráta: '+num(r.actualLoss)+' ('+num(r.actualLossPct,2)+' %).'+(r.status==='CLOSED'?' Zakázka uzavřena.':''),'ok');loadJobs();loadCompanyBalances();loadOverview();
+  }catch(e){showStatus('returnStatus','Chyba: '+e.message,'error')}
+}
 async function loadJobs(){
   try{
     const r=await api('listExternalJobs');
-    const rows=r.rows.map(x=>`<tr><td><strong>${esc(x.id)}</strong></td><td>${esc(x.company)}</td><td>${esc(x.inputCode)}</td><td>${num(x.sent)} ${esc(x.unit)}</td><td>${num(x.returned)} ${esc(x.unit)}</td><td>${num(x.loss)} ${esc(x.unit)}${x.lossPct!==null?' · '+num(x.lossPct,2)+' %':''}</td><td>${esc(x.status)}</td></tr>`).join('');
-    document.getElementById('jobsList').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Firma</th><th>Vstup</th><th>Odesláno</th><th>Vráceno</th><th>Ztráta</th><th>Stav</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const rows=r.rows.map(x=>`<tr><td><strong>${esc(x.id)}</strong></td><td>${esc(x.company)}</td><td>${esc(x.inputCode)}${x.inputBatchId?' · '+esc(x.inputBatchId):''}</td><td>${esc(x.outputCode)}</td><td>${num(x.sent)} ${esc(x.unit)}</td><td>${num(x.returned)} ${esc(x.unit)}</td><td>${num(x.loss)} ${esc(x.unit)}${x.lossPct!==null?' · '+num(x.lossPct,2)+' %':''}</td><td>${esc(x.status)}</td></tr>`).join('');
+    document.getElementById('jobsList').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Firma</th><th>Vstup / šarže</th><th>Výstup</th><th>Odesláno</th><th>Vráceno</th><th>Ztráta</th><th>Stav</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }catch(e){document.getElementById('jobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
 async function loadCompanyBalances(){try{const r=await api('externalOverview');document.getElementById('companyBalances').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Firma</th><th>Kód</th><th>Materiál u firmy</th><th>Stav inventury</th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td>${esc(x.company)}</td><td><strong>${esc(x.code)}</strong></td><td>${num(x.qty)} ${esc(x.unit)}</td><td>${x.flag?'<span class="badge '+(x.flag==='OK'?'good':'bad')+'">'+esc(x.flag)+'</span>':'—'}</td></tr>`).join('')+'</tbody></table></div>'}catch(e){document.getElementById('companyBalances').innerHTML='<div class="error-box">'+esc(e.message)+'</div>'}}
-async function externalCheck(){try{const r=await api('externalInventoryCheck',{companyId:val('checkCompany'),code:val('checkCode'),physicalQty:n('checkQty'),note:val('checkNote')});showStatus('checkStatus','Systém: '+num(r.systemQty)+' · fyzicky: '+num(r.physicalQty)+' · rozdíl: '+num(r.delta)+'. Korekce byla zapsána.','ok');loadCompanyBalances();loadOverview()}catch(e){showStatus('checkStatus','Chyba: '+e.message,'error')}}
+async function externalCheck(){try{const r=await api('externalInventoryCheck',{companyId:val('checkCompany'),code:val('checkCode'),physicalQty:n(val('checkQty')),note:val('checkNote')});showStatus('checkStatus','Systém: '+num(r.systemQty)+' · fyzicky: '+num(r.physicalQty)+' · rozdíl: '+num(r.delta)+'. Korekce byla zapsána.','ok');loadCompanyBalances();loadOverview()}catch(e){showStatus('checkStatus','Chyba: '+e.message,'error')}}
 async function loadHistory(){
   try{
     const r=await api('history',{limit:200});
@@ -91,5 +219,8 @@ function syncRegRole(){const s=document.getElementById('regUser');if(!s||!s.sele
 function val(id){return document.getElementById(id).value.trim()}function n(id){const v=Number(val(id).replace(',','.'));if(!Number.isFinite(v)||v===0)throw new Error('INVALID_NUMBER');return v}function nOrNull(id){const s=val(id);if(!s)return null;const v=Number(s.replace(',','.'));if(!Number.isFinite(v))throw new Error('INVALID_NUMBER');return v}
 function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central')loadCentral();if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
 document.getElementById('regUser').addEventListener('change',syncRegRole);
+document.getElementById('newCategory').addEventListener('change',syncNewCategory);
+syncNewCategory();
+
 (async()=>{me=await requireAuth('ADMIN');if(!me)return;document.getElementById('who').textContent=me.name+' · ADMIN';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadOverview();loadCentral();loadUsers();loadCompanies()})();
 </script></body></html>
