@@ -12,10 +12,15 @@
 <script src="config.js"></script>
 <script src="qr-mini.js"></script>
 
+<!-- QR generátor – běží lokálně v prohlížeči -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.min.js"></script>
+
 <!-- NIIMBOT Web Bluetooth -->
 <script src="https://cdn.jsdelivr.net/npm/niimbot-web-bluetooth@1.3.5/src/niimbot.js"></script>
 
-<script src="app.js" defer></script>
+<!-- app.js musí být načten před inline skriptem adminu,
+     protože z něj používáme api(), requireAuth(), esc(), num() atd. -->
+<script src="app.js"></script>
 </head>
 
 <body>
