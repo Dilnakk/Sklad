@@ -9,8 +9,30 @@
 </main>
 <script>
 let me=null;
-function itemText(item){let parts=[];if(item.druh)parts.push(item.druh);if(item.velikost)parts.push(item.velikost);if(item.barva)parts.push(item.barva);if(item.cistota)parts.push(item.cistota);return parts.join(' · ')}
-function renderItem(r){if(!r||!r.item)return '<div class="error-box">Položka nebyla nalezena.</div>';const i=r.item;return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · pozice ${esc(i.pozice||'—')}</div><div class="grid grid-2" style="margin-top:12px"><div><div class="muted">Centrální sklad</div><div class="qty">${num(i.pocet)} ${esc(i.jednotka)}</div>${Number(i.celkemCt)>0?`<div class="muted">${num(i.celkemCt)} ct</div>`:''}</div><div><div class="muted">U mě</div><div class="qty">${num(r.mine?.pocet||0)} ${esc(i.jednotka)}</div>${Number(r.mine?.celkemCt)>0?`<div class="muted">${num(r.mine.celkemCt)} ct</div>`:''}</div></div><div class="actions"><button class="good" onclick="moveStock('TAKE','${esc(i.kod)}')">VZÍT ZE SKLADU</button><button class="secondary" onclick="moveStock('RETURN','${esc(i.kod)}')">VRÁTIT DO SKLADU</button></div><div id="moveBox"></div></div>`}
+function itemText(item){
+  const parts=[];
+  if(item.druh)parts.push(item.druh);
+  if(item.kategorie==='KÁMEN'){
+    if(item.velikost)parts.push(item.velikost);
+    if(item.barva)parts.push(item.barva);
+    if(item.cistota)parts.push(item.cistota);
+  }else{
+    if(item.ryzost)parts.push(item.ryzost+'/1000');
+    if(item.barva)parts.push(item.barva);
+    if(item.forma)parts.push(item.forma);
+  }
+  return parts.join(' · ');
+}
+
+function renderItem(r){
+  if(!r||!r.item)return '<div class="error-box">Položka nebyla nalezena.</div>';
+  const i=r.item,metal=i.kategorie!=='KÁMEN',mine=r.mine||{pocet:0,jednotka:i.jednotka,celkemCt:0};
+  const extra=metal?`<div class="grid grid-2" style="margin-top:12px"><div><div class="muted">Čisté Au</div><div class="qty">${i.cisteAuG===null?'—':num(i.cisteAuG,3)+' g'}</div></div><div><div class="muted">14k ekvivalent</div><div class="qty">${i.ekv14kG===null?'—':num(i.ekv14kG,3)+' g'}</div></div></div>`:'';
+  const centralCt=Number(i.celkemCt)>0?`<div class="muted">${num(i.celkemCt)} ct</div>`:'';
+  const mineCt=Number(mine.celkemCt)>0?`<div class="muted">${num(mine.celkemCt)} ct</div>`:'';
+  return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · pozice ${esc(i.pozice||'—')}</div>${metal&&i.ryzost===null?'<div class="muted" style="margin-top:8px">Ryzost zatím není určena.</div>':''}${extra}<div class="grid grid-2" style="margin-top:12px"><div><div class="muted">Centrální sklad</div><div class="qty">${num(i.pocet)} ${esc(i.jednotka)}</div>${centralCt}</div><div><div class="muted">U mě</div><div class="qty">${num(mine.pocet||0)} ${esc(i.jednotka)}</div>${mineCt}</div></div><div class="actions"><button class="good" onclick="moveStock('TAKE','${esc(i.kod)}')">VZÍT ZE SKLADU</button><button class="secondary" onclick="moveStock('RETURN','${esc(i.kod)}')">VRÁTIT DO SKLADU</button></div><div id="moveBox"></div></div>`
+}
+
 async function searchItem(){const code=document.getElementById('searchCode').value.trim();if(!code){showStatus('searchStatus','Zadej nebo naskenuj kód.','error');return}showStatus('searchStatus','Hledám…');try{const r=await api('searchItem',{code});document.getElementById('searchResult').innerHTML=renderItem(r);showStatus('searchStatus','Položka nalezena.','ok')}catch(e){document.getElementById('searchResult').innerHTML='';showStatus('searchStatus','Chyba: '+e.message,'error')}}
 async function moveStock(direction,code){const qty=prompt(direction==='TAKE'?'Kolik vzít?':'Kolik vrátit?','1');if(qty===null)return;const n=Number(qty.replace(',','.'));if(!Number.isFinite(n)||n<=0){alert('Neplatné množství.');return}try{const r=await api('movePersonal',{code,qty:n,direction});document.getElementById('searchResult').innerHTML=renderItem(r);await loadMine();}catch(e){alert('Pohyb se nepodařil: '+e.message)}}
 async function loadMine(){try{const r=await api('myStock');if(!r.rows.length){document.getElementById('mineResult').innerHTML='<p class="muted">Nemáš u sebe žádný materiál.</p>';return}document.getElementById('mineResult').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Položka</th><th>Stav</th><th></th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td><strong>${esc(x.kod)}</strong></td><td>${esc(itemText(x))}</td><td>${num(x.pocet)} ${esc(x.jednotka)}${Number(x.celkemCt)>0?' · '+num(x.celkemCt)+' ct':''}</td><td><button class="small secondary" onclick="document.getElementById('searchCode').value='${esc(x.kod)}';document.querySelector('[data-tab=search]').click();searchItem()">Otevřít</button></td></tr>`).join('')+'</tbody></table></div>'}catch(e){document.getElementById('mineResult').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}}
