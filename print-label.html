@@ -1,7 +1,271 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR štítek</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js" defer></script><style>
-body{background:#fff;color:#000}.label-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}.label{width:30mm;height:20mm;border:0;display:grid;grid-template-columns:15mm 1fr;gap:2mm;align-items:center;padding:1mm;background:#fff;color:#000}.qr{width:14mm;height:14mm}.text{font-family:Arial,sans-serif;text-align:center;line-height:1.05}.main{font-size:3.3mm;font-weight:700}.code{font-size:3.5mm;font-weight:800;margin-top:1.3mm}.under{font-size:2.5mm;margin-top:1mm;color:#333}.controls{position:fixed;left:10px;top:10px;background:#111;color:#fff;padding:10px;border-radius:10px}.controls button{background:#fff;color:#111}.no-print{display:block}@media print{@page{size:30mm 20mm;margin:0}.controls{display:none!important}.label-page{padding:0;min-height:20mm}.label{width:30mm;height:20mm}}
-</style></head><body>
-<div class="controls no-print"><button onclick="window.print()">🖨️ Tisk</button> <button onclick="window.close()">Zavřít</button></div><div class="label-page"><div id="label" class="label"><div id="qr" class="qr"></div><div class="text"><div id="main" class="main">Načítám…</div><div id="code" class="code"></div><div id="under" class="under"></div></div></div></div>
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>QR štítek – NIIMBOT B21S</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+  <script src="qr-mini.js"></script>
+  <!-- app.js používá defer; loadLabel() se spouští až po DOMContentLoaded. -->
+  <script src="app.js" defer></script>
+  <!-- Stejná lokálně běžící QR knihovna jako ve funkčním voucherovém systému. -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.min.js"></script>
+  <!-- Stejná knihovna a verze přímého Bluetooth tisku jako ve voucherovém systému. -->
+  <script src="https://cdn.jsdelivr.net/npm/niimbot-web-bluetooth@1.3.5/src/niimbot.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f3f4f6; color: #222; font-family: Arial, sans-serif; }
+    .screen { max-width: 760px; margin: 22px auto; padding: 16px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .toolbar button { width: auto; }
+    .label-page { display: flex; align-items: center; justify-content: center; padding: 12px; }
+    .label { width: 30mm; height: 20mm; display: grid; grid-template-columns: 15mm 1fr; gap: 2mm; align-items: center; padding: 1mm; overflow: hidden; background: #fff; color: #000; }
+    .qr { width: 14mm; height: 14mm; display: flex; align-items: center; justify-content: center; }
+    .qr img { width: 14mm; height: 14mm; display: block; image-rendering: pixelated; }
+    .text { min-width: 0; font-family: Arial, sans-serif; text-align: center; line-height: 1.05; overflow: hidden; overflow-wrap: anywhere; }
+    .main { font-size: 3mm; font-weight: 700; }
+    .detail { font-size: 2.5mm; margin-top: .6mm; }
+    .code { font-size: 3.3mm; font-weight: 800; margin-top: 1mm; }
+    .status { margin: 12px 0; padding: 12px 14px; border-radius: 8px; background: #e9f7ec; color: #1d5e2a; border: 1px solid #c7e8cd; white-space: pre-wrap; line-height: 1.45; }
+    .status.error { background: #fdecec; color: #8a1c1c; border-color: #f0bbbb; }
+    .hint { font-size: 14px; color: #555; line-height: 1.45; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    @media print {
+      @page { size: 30mm 20mm; margin: 0; }
+      html, body { width: 30mm; height: 20mm; margin: 0; padding: 0; background: #fff; }
+      .screen { width: 30mm; height: 20mm; margin: 0; padding: 0; }
+      .toolbar, .status, .hint, .page-title { display: none !important; }
+      .label-page { width: 30mm; height: 20mm; padding: 0; }
+      .label { width: 30mm; height: 20mm; }
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <h2 class="page-title">QR štítek položky</h2>
+    <div class="toolbar">
+      <button id="bluetoothPrint" class="primary" type="button" disabled>🖨️ Tisk přes Bluetooth – NIIMBOT B21S</button>
+      <button id="systemPrint" class="secondary" type="button" disabled>🖨️ Běžný tisk / náhled</button>
+      <button id="closeWindow" class="secondary" type="button" onclick="window.close()">Zavřít</button>
+    </div>
+    <div id="labelStatus" class="status">Načítám položku…</div>
+    <div class="label-page">
+      <div id="label" class="label">
+        <div id="qr" class="qr"></div>
+        <div class="text">
+          <div id="main" class="main">Načítám…</div>
+          <div id="detail" class="detail"></div>
+          <div id="code" class="code"></div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Přímý tisk používá Bluetooth v aktuálním Chrome nebo Edge. Klikni na „Tisk přes Bluetooth“, ve výběru zvol NIIMBOT B21S a potvrď připojení. Pokud je tiskárna připojena v mobilní/desktopové aplikaci NIIMBOT, nejprve ji tam odpoj. Štítek je 30 × 20 mm, 203 DPI (240 × 160 bodů). Běžný tisk je pouze záložní tisk přes systémový dialog.</p>
+  </main>
+
 <script>
-(async()=>{const p=new URLSearchParams(location.search),code=p.get('code');if(!code){document.getElementById('main').textContent='CHYBÍ KÓD';return}try{const r=await api('searchItem',{code});const i=r.item;const metal=i.kategorie!=='KÁMEN';const title=metal?[i.druh,i.ryzost!==null&&i.ryzost!==undefined?String(i.ryzost)+'/1000':null,i.barva,i.forma].filter(Boolean).join(' · '):[i.velikost,i.barva,i.cistota].filter(Boolean).join(' ');document.getElementById('main').textContent=title||i.druh||i.kod;document.getElementById('code').textContent=i.kod;document.getElementById('under').textContent=metal?'':(i.druh||'');document.getElementById('qr').innerHTML=InventoryQR.toSvg(i.kod,4,2)}catch(e){document.getElementById('main').textContent='CHYBA';document.getElementById('under').textContent=e.message}})();
-</script></body></html>
+'use strict';
+
+const NIIMBOT_B21S_MODEL = {
+  name_prefixes: ['B21'],
+  task: 'b1',
+  density: 3,
+  label_type: 1,
+  speed: 1
+};
+
+const NIIMBOT_B21S_SIZE = {
+  w_px: 240,
+  h_px: 160,
+  offset_y_px: 0,
+  dpi: 203
+};
+
+let loadedItem = null;
+let labelDataUrl = null;
+
+function setLabelStatus(message, isError) {
+  const node = document.getElementById('labelStatus');
+  node.textContent = message;
+  node.className = 'status' + (isError ? ' error' : '');
+}
+
+function labelLines(item) {
+  if (String(item.kategorie || '').toUpperCase() === 'KÁMEN') {
+    return {
+      line1: item.velikost || item.druh || 'Kámen',
+      line2: [item.barva, item.cistota].filter(Boolean).join(' · '),
+      line3: item.druh || ''
+    };
+  }
+  const fineness = item.ryzost !== null && item.ryzost !== undefined && item.ryzost !== ''
+    ? String(item.ryzost) + '/1000'
+    : '';
+  return {
+    line1: item.druh || 'Materiál',
+    line2: [fineness, item.barva].filter(Boolean).join(' · '),
+    line3: item.forma || ''
+  };
+}
+
+function createQrDataUrl(code) {
+  // Stejný postup jako ve voucherovém systému: data se do knihovny jen lokálně vykreslí.
+  const qr = window.qrcode(0, 'M');
+  qr.addData(String(code));
+  qr.make();
+  return qr.createDataURL(4, 0);
+}
+
+function drawFit(ctx, text, x, y, maxWidth, startSize, weight) {
+  if (!text) return;
+  let size = startSize;
+  do {
+    ctx.font = `${weight} ${size}px Arial, sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth || size <= 8) break;
+    size--;
+  } while (size > 8);
+  ctx.fillText(text, x, y, maxWidth);
+}
+
+function createNiimbotLabelDataUrl(item) {
+  return new Promise((resolve, reject) => {
+    try {
+      const code = String(item.kod || '');
+      if (!code) throw new Error('Položka nemá kód.');
+      const qrDataUrl = createQrDataUrl(code);
+      const qrImage = new Image();
+
+      qrImage.onload = function () {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = NIIMBOT_B21S_SIZE.w_px;
+          canvas.height = NIIMBOT_B21S_SIZE.h_px;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Nepodařilo se vytvořit tiskový obrázek.');
+
+          // Bílé pozadí a stejné rozměry 240 × 160 px jako u voucherů.
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.imageSmoothingEnabled = false;
+
+          // QR vlevo; samotný QR obsahuje pouze kód skladové položky.
+          const qrSize = 126;
+          const qrX = 8;
+          const qrY = Math.round((NIIMBOT_B21S_SIZE.h_px - qrSize) / 2);
+          ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+
+          // Vpravo název, parametry a kód položky.
+          const info = labelLines(item);
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const textCenterX = 184;
+          drawFit(ctx, info.line1, textCenterX, 31, 106, 15, '700');
+          drawFit(ctx, info.line2, textCenterX, 54, 106, 12, '700');
+          drawFit(ctx, info.line3, textCenterX, 75, 106, 11, '400');
+          drawFit(ctx, code, textCenterX, 112, 106, 17, '700');
+          resolve(canvas.toDataURL('image/png'));
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      qrImage.onerror = function () {
+        reject(new Error('QR obrázek se nepodařilo připravit.'));
+      };
+      qrImage.src = qrDataUrl;
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function loadLabel() {
+  const code = new URLSearchParams(window.location.search).get('code');
+  if (!code) {
+    document.getElementById('main').textContent = 'CHYBÍ KÓD';
+    setLabelStatus('V adrese chybí kód položky.', true);
+    return;
+  }
+
+  try {
+    // app.js má defer: tato funkce se zavolá až po jeho načtení.
+    if (typeof window.api !== 'function') {
+      throw new Error('Funkce api() se nenačetla. Zkontroluj, že je na GitHubu aktuální app.js a obnov stránku přes Ctrl+Shift+R.');
+    }
+    if (typeof window.qrcode !== 'function') {
+      throw new Error('QR knihovna qrcode-generator se nenačetla.');
+    }
+
+    const response = await window.api('searchItem', { code });
+    loadedItem = response && response.item;
+    if (!loadedItem) throw new Error('Server nevrátil položku pro kód ' + code + '.');
+
+    const lines = labelLines(loadedItem);
+    document.getElementById('main').textContent = lines.line1;
+    document.getElementById('detail').textContent = [lines.line2, lines.line3].filter(Boolean).join(' · ');
+    document.getElementById('code').textContent = loadedItem.kod || code;
+    const qrPreview = document.createElement('img');
+    qrPreview.alt = 'QR kód položky ' + (loadedItem.kod || code);
+    qrPreview.src = createQrDataUrl(loadedItem.kod || code);
+    document.getElementById('qr').replaceChildren(qrPreview);
+
+    labelDataUrl = await createNiimbotLabelDataUrl(loadedItem);
+    document.getElementById('systemPrint').disabled = false;
+    document.getElementById('bluetoothPrint').disabled = false;
+
+    if (!window.Niimbot || typeof window.Niimbot.isSupported !== 'function') {
+      setLabelStatus('Položka je načtena, ale tisková knihovna NIIMBOT se nenačetla. Zkontroluj internetové připojení a načtení knihovny niimbot-web-bluetooth.', true);
+    } else if (!window.Niimbot.isSupported()) {
+      setLabelStatus('Položka je načtena. Přímý tisk vyžaduje aktuální Chrome nebo Edge a stránku otevřenou přes HTTPS. Záložní systémový tisk je dostupný.', true);
+    } else {
+      setLabelStatus('Položka načtena. Přímý Bluetooth tisk je připravený.', false);
+    }
+  } catch (error) {
+    document.getElementById('main').textContent = 'CHYBA';
+    document.getElementById('detail').textContent = '';
+    setLabelStatus('Položku se nepodařilo načíst: ' + (error && error.message ? error.message : String(error)), true);
+  }
+}
+
+async function printNiimbotLabel() {
+  if (!loadedItem || !labelDataUrl) {
+    setLabelStatus('Nejdřív počkej, až se položka a QR štítek načtou.', true);
+    return;
+  }
+  if (!window.Niimbot || typeof window.Niimbot.isSupported !== 'function' || !window.Niimbot.isSupported()) {
+    setLabelStatus('Přímý tisk vyžaduje Chrome nebo Edge s podporou Web Bluetooth a stránku přes HTTPS.', true);
+    return;
+  }
+
+  const button = document.getElementById('bluetoothPrint');
+  button.disabled = true;
+  document.getElementById('systemPrint').disabled = true;
+  setLabelStatus('Připravuji štítek a připojuji NIIMBOT…', false);
+
+  try {
+    // Stejné ověřené volání jako ve voucherovém systému.
+    await window.Niimbot.printImage(labelDataUrl, {
+      model: NIIMBOT_B21S_MODEL,
+      size: NIIMBOT_B21S_SIZE,
+      copies: 1,
+      onProgress: status => setLabelStatus('Tisk: ' + status, false)
+    });
+    setLabelStatus('Štítek byl odeslán do NIIMBOT B21S.', false);
+  } catch (error) {
+    console.error('NIIMBOT tisk:', error);
+    setLabelStatus('Tisk se nepodařil: ' + (error && error.message ? error.message : String(error)), true);
+  } finally {
+    button.disabled = false;
+    document.getElementById('systemPrint').disabled = false;
+  }
+}
+
+document.getElementById('bluetoothPrint').addEventListener('click', printNiimbotLabel);
+document.getElementById('systemPrint').addEventListener('click', () => window.print());
+
+// Počkej na defer skripty (zejména app.js) před prvním voláním api().
+window.addEventListener('DOMContentLoaded', loadLabel, { once: true });
+</script>
+</body>
+</html>
