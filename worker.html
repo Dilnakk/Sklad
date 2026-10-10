@@ -1,11 +1,30 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js" defer></script></head><body>
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body>
 <header><div class="header-inner"><div class="brand"><h1>Sklad materiálu</h1><p id="who">Pracovník</p></div><div class="top-actions"><span id="conn" class="badge">Kontrola…</span><button class="small secondary" onclick="clearAuth();go('index.html')">Odhlásit zařízení</button></div></div></header>
 <main class="container">
-  <div class="nav"><button class="active" data-tab="search">🔎 Hledat</button><button data-tab="mine">📦 Můj stav</button></div>
-  <section id="tab-search" class="section active">
+  <div class="nav"><button class="active" data-tab="job">🛠️ Nová zakázka</button><button data-tab="search">🔎 Hledat</button><button data-tab="mine">📦 Můj stav</button><button data-tab="myjobs">📋 Moje zakázky</button></div>
+  <section id="tab-job" class="section active">
+    <div class="card job-create-card">
+      <div class="job-create-intro"><div><p class="eyebrow">ZLATNICKÁ DÍLNA</p><h2>Zapsat zakázku</h2><p class="muted">Zlato se odečte z tvého osobního skladu pouze tehdy, když ho skutečně vydáš na práci.</p></div><div class="job-create-symbol">✦</div></div>
+      <div class="job-type-buttons"><button type="button" id="jobTypeRepair" class="job-type active" onclick="setJobType('OPRAVA')"><span>🛠️</span><strong>OPRAVA</strong><small>Číslo zakázky je povinné</small></button><button type="button" id="jobTypeMake" class="job-type" onclick="setJobType('VÝROBA')"><span>💍</span><strong>VÝROBA</strong><small>Pro zákazníka nebo sklad</small></button></div>
+      <input type="hidden" id="jobType" value="OPRAVA">
+      <div class="form-grid">
+        <div><label id="jobNumberLabel">Číslo zakázky *</label><input id="jobNumber" placeholder="Např. 0123"></div>
+        <div><label>Ryzost zlata</label><select id="jobGoldCode"><option value="">Bez výdeje zlata</option></select><p id="jobGoldHint" class="muted field-hint">Vyber zlato pouze tehdy, pokud ho na zakázku vydáváš.</p></div>
+        <div><label>Vydané zlato (g) <span id="jobGramsRequired" class="muted">volitelné</span></label><input id="jobGrams" inputmode="decimal" placeholder="0,00"><p class="muted field-hint">U opravy může zůstat prázdné. U výroby je gramáž povinná.</p></div>
+        <div><label>Cena práce (Kč) <span class="muted">nepovinné</span></label><input id="jobPrice" inputmode="decimal" placeholder="Doplní se později"></div>
+        <div class="span-all"><label>Poznámka <span class="muted">nepovinná</span></label><textarea id="jobNote" rows="2" placeholder="Např. leštění, rovnání, výroba pro sklad…"></textarea></div>
+      </div>
+      <div class="job-stock-note"><span class="stock-note-icon">✓</span><div><strong>Kontrola osobního skladu</strong><p id="jobStockSummary" class="muted">Načítám dostupné zlato…</p></div></div>
+      <div class="actions"><button id="createJobButton" class="primary job-submit" onclick="submitInternalJob()">POTVRDIT VÝDEJ</button></div>
+      <div id="createJobStatus"></div>
+    </div>
+    <div class="card"><h2>Nedávné zakázky</h2><div id="workerRecentJobs"><p class="muted">Načítám…</p></div></div>
+  </section>
+  <section id="tab-search" class="section">
     <div class="card"><h2>Najít položku</h2><div class="form-grid"><div><label>Kód položky</label><input id="searchCode" placeholder="D-0001 / AU-0001"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('searchCode').value=v;searchItem()})">📷 Skenovat QR</button></div></div><div class="actions"><button class="primary" onclick="searchItem()">🔎 Vyhledat</button></div><div id="searchStatus"></div><div id="searchResult"></div></div>
   </section>
   <section id="tab-mine" class="section"><div class="card"><h2>Můj stav</h2><div id="mineResult">Načítám…</div></div></section>
+  <section id="tab-myjobs" class="section"><div class="card"><h2>Moje zakázky</h2><p class="muted">Přehled zakázek, které jsi zapsal. Čísla zakázek se mohou v různých obdobích opakovat; interní ID zůstává jedinečné.</p><div id="myJobsList">Načítám…</div></div></section>
 </main>
 <script>
 let me=null;
@@ -36,6 +55,72 @@ function renderItem(r){
 async function searchItem(){const code=document.getElementById('searchCode').value.trim();if(!code){showStatus('searchStatus','Zadej nebo naskenuj kód.','error');return}showStatus('searchStatus','Hledám…');try{const r=await api('searchItem',{code});document.getElementById('searchResult').innerHTML=renderItem(r);showStatus('searchStatus','Položka nalezena.','ok')}catch(e){document.getElementById('searchResult').innerHTML='';showStatus('searchStatus','Chyba: '+e.message,'error')}}
 async function moveStock(direction,code){const qty=prompt(direction==='TAKE'?'Kolik vzít?':'Kolik vrátit?','1');if(qty===null)return;const n=Number(qty.replace(',','.'));if(!Number.isFinite(n)||n<=0){alert('Neplatné množství.');return}try{const r=await api('movePersonal',{code,qty:n,direction});document.getElementById('searchResult').innerHTML=renderItem(r);await loadMine();}catch(e){alert('Pohyb se nepodařil: '+e.message)}}
 async function loadMine(){try{const r=await api('myStock');if(!r.rows.length){document.getElementById('mineResult').innerHTML='<p class="muted">Nemáš u sebe žádný materiál.</p>';return}document.getElementById('mineResult').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Položka</th><th>Stav</th><th></th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td><strong>${esc(x.kod)}</strong></td><td>${esc(itemText(x))}</td><td>${num(x.pocet)} ${esc(x.jednotka)}${Number(x.celkemCt)>0?' · '+num(x.celkemCt)+' ct':''}</td><td><button class="small secondary" onclick="document.getElementById('searchCode').value='${esc(x.kod)}';document.querySelector('[data-tab=search]').click();searchItem()">Otevřít</button></td></tr>`).join('')+'</tbody></table></div>'}catch(e){document.getElementById('mineResult').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}}
-function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine()})}
-(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine()})();
+
+let workerGoldOptions=[];
+let internalSubmissionKey=makeId();
+let currentJobType='OPRAVA';
+function setJobType(type){
+  currentJobType=type;document.getElementById('jobType').value=type;
+  document.getElementById('jobTypeRepair').classList.toggle('active',type==='OPRAVA');
+  document.getElementById('jobTypeMake').classList.toggle('active',type==='VÝROBA');
+  document.getElementById('jobNumberLabel').textContent=type==='OPRAVA'?'Číslo zakázky *':'Číslo zakázky (nepovinné)';
+  document.getElementById('jobGramsRequired').textContent=type==='VÝROBA'?'povinné':'volitelné';
+  document.getElementById('jobNumber').required=type==='OPRAVA';
+}
+async function loadJobGoldOptions(){
+  try{
+    const r=await api('jobGoldOptions');workerGoldOptions=r.options||[];
+    const select=document.getElementById('jobGoldCode');
+    select.innerHTML='<option value="">Bez výdeje zlata</option>'+workerGoldOptions.map(o=>`<option value="${esc(o.code)}" data-fineness="${o.fineness}" data-balance="${o.balance}">${esc(o.label)}</option>`).join('');
+    const preferred=workerGoldOptions.find(o=>Number(o.fineness)===585)||workerGoldOptions[0];
+    if(preferred)select.value=preferred.code;
+    updateJobStockHint();
+    select.onchange=updateJobStockHint;
+  }catch(e){showStatus('createJobStatus','Dostupné zlato se nepodařilo načíst: '+jobErrorText(e),'error')}
+}
+function jobErrorText(e){
+  const m=String(e&&e.message||e);
+  const map={INSUFFICIENT_PERSONAL_STOCK:'Na osobním skladu není dostatek zlata.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka už neexistuje.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',RATE_LIMIT:'Příliš mnoho požadavků. Chvíli počkej a zkus to znovu.'};
+  return map[m]||m;
+}
+function updateJobStockHint(){
+  const select=document.getElementById('jobGoldCode'),o=workerGoldOptions.find(x=>x.code===select.value);
+  document.getElementById('jobStockSummary').textContent=o?`K dispozici ${num(o.balance,3)} g · ryzost ${o.fineness}/1000 · kód ${o.code}`:'Není vybráno zlato. Bez výdeje se osobní sklad nezmění.';
+}
+async function submitInternalJob(){
+  const btn=document.getElementById('createJobButton');
+  const jobNumber=document.getElementById('jobNumber').value.trim();
+  const rawGrams=document.getElementById('jobGrams').value.trim();
+  const grams=rawGrams===''?0:Number(rawGrams.replace(',','.'));
+  const rawPrice=document.getElementById('jobPrice').value.trim();
+  const price=rawPrice===''?'':Number(rawPrice.replace(',','.'));
+  const goldCode=document.getElementById('jobGoldCode').value;
+  if(currentJobType==='OPRAVA'&&!jobNumber){showStatus('createJobStatus','U opravy je číslo zakázky povinné.','error');return}
+  if(!Number.isFinite(grams)||grams<0){showStatus('createJobStatus','Zadej platnou gramáž.','error');return}
+  if(currentJobType==='VÝROBA'&&grams<=0){showStatus('createJobStatus','U výroby je gramáž povinná a musí být větší než nula.','error');return}
+  if(grams>0&&!goldCode){showStatus('createJobStatus','Pro výdej gramů vyber zlato ze svého osobního skladu.','error');return}
+  if(grams>0){const option=workerGoldOptions.find(o=>o.code===goldCode);if(!option||option.balance<grams-1e-9){showStatus('createJobStatus','Na osobním skladu není dostatek vybraného zlata.','error');return}}
+  if(rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('createJobStatus','Zadej platnou cenu nebo pole nech prázdné.','error');return}
+  btn.disabled=true;btn.textContent='UKLÁDÁM…';
+  try{
+    const r=await api('createInternalJob',{submissionKey:internalSubmissionKey,jobType:currentJobType,jobNumber,goldCode:grams>0?goldCode:'',grams,price,note:document.getElementById('jobNote').value.trim()});
+    internalSubmissionKey=makeId();
+    showStatus('createJobStatus',r.duplicate?'Tato zakázka už byla uložena.':'Zakázka '+r.job.id+' byla uložena. Výdej zlata je zaevidován.','ok');
+    document.getElementById('jobNumber').value='';document.getElementById('jobGrams').value='';document.getElementById('jobPrice').value='';document.getElementById('jobNote').value='';
+    await loadJobGoldOptions();await loadMine();await loadMyInternalJobs();
+  }catch(e){showStatus('createJobStatus','Zakázku se nepodařilo uložit: '+jobErrorText(e),'error')}
+  finally{btn.disabled=false;btn.textContent='POTVRDIT VÝDEJ'}
+}
+function renderWorkerJobs(rows,targetId){
+  const el=document.getElementById(targetId);
+  if(!rows.length){el.innerHTML='<p class="muted">Zatím nemáš žádné zakázky.</p>';return}
+  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Cena práce</th><th>Stav</th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div></td><td>${esc(j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${num(j.grams,3)} g</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span></td></tr>`).join('')+'</tbody></table></div>';
+}
+async function loadMyInternalJobs(){
+  try{const r=await api('listMyInternalJobs');const rows=r.rows||[];renderWorkerJobs(rows.slice(0,8),'workerRecentJobs');renderWorkerJobs(rows,'myJobsList')}
+  catch(e){document.getElementById('workerRecentJobs').innerHTML=`<div class="error-box">${esc(e.message)}</div>`;document.getElementById('myJobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}
+
+function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
+(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadMyInternalJobs()})();
 </script></body></html>
