@@ -28,3 +28,5 @@ body.manager-page{--ink:#202b3c;--muted:#738095;--line:#e5eaf1;--surface:#fff;--
 .manager-job-search p{margin:8px 0 0;color:#8792a5;font-size:11px;line-height:1.45}
 .manager-table tbody tr.manager-row-search-match{background:#fff5d9!important;outline:2px solid #e8bd4d;outline-offset:-2px;transition:background .25s ease}
 @media(max-width:650px){.manager-job-search-controls{grid-template-columns:1fr 1fr}.manager-job-search-controls input{grid-column:1/-1}.manager-job-search-controls .manager-primary-button,.manager-job-search-controls .manager-soft-button{width:100%}.manager-table-heading{align-items:flex-start}.manager-table-tools{flex-shrink:0}}
+
+.manager-stones-readonly{margin:14px 0 0;padding:14px 16px;border:1px solid #e4d6c3;background:#faf5ec;border-radius:12px;color:#493a2c}.manager-stones-readonly strong{display:block;margin-bottom:6px}.manager-stones-readonly p{margin:0;color:#786753}.manager-stones-readonly ul{margin:7px 0 0;padding-left:20px}.manager-stones-readonly li{margin:4px 0;line-height:1.45}
