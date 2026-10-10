@@ -1,7 +1,7 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – administrace</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js" defer></script></head><body>
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – administrace</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body>
 <header><div class="header-inner"><div class="brand"><h1>Sklad materiálu</h1><p id="who">ADMIN</p></div><div class="top-actions"><span id="conn" class="badge">Kontrola…</span><button class="small secondary" onclick="clearAuth();go('index.html')">Odhlásit zařízení</button></div></div></header>
 <main class="container">
-<div class="nav" id="nav"><button class="active" data-tab="overview">🏠 Přehled</button><button data-tab="central">📦 Centrální sklad</button><button data-tab="workers">👩‍🔧 U zlatnic</button><button data-tab="external">🏭 Externí zpracování</button><button data-tab="companies">🏢 U firem</button><button data-tab="history">📋 Historie</button><button data-tab="users">👥 Uživatelé</button><button data-tab="devices">📱 Zařízení</button><button data-tab="registration">🔐 Registrace</button></div>
+<div class="nav" id="nav"><button class="active" data-tab="overview">🏠 Přehled</button><button data-tab="central">📦 Centrální sklad</button><button data-tab="workers">👩‍🔧 U zlatnic</button><button data-tab="external">🏭 Externí zpracování</button><button data-tab="companies">🏢 U firem</button><button data-tab="jobs">🛠️ Kontrola zakázek</button><button data-tab="history">📋 Historie</button><button data-tab="users">👥 Uživatelé</button><button data-tab="devices">📱 Zařízení</button><button data-tab="registration">🔐 Registrace</button></div>
 <section id="tab-overview" class="section active"><div class="grid grid-4" id="stats"></div><div class="card"><h2>Aktuální stav</h2><div id="overviewTable">Načítám…</div><details style="margin-top:18px"><summary style="cursor:pointer;font-weight:750">⚙️ Podrobný stav kovů</summary><div id="metalDetail" style="margin-top:14px">Načítám…</div></details></div></section>
 <section id="tab-central" class="section">
 <div class="card"><h2>Hledat položku</h2><div class="form-grid"><div><label>Kód</label><input id="centralSearchCode" placeholder="D-0001 / AU-0001"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('centralSearchCode').value=v;centralSearch()})">📷 Skenovat QR</button></div></div><div class="actions"><button class="primary" onclick="centralSearch()">🔎 Hledat</button></div><div id="centralSearchStatus"></div><div id="centralSearchResult"></div></div>
@@ -15,6 +15,46 @@
 <div class="card"><h2>Vrácení z externí zakázky</h2><div class="form-grid"><div><label>ID zakázky</label><input id="returnJobId" placeholder="EX-0001"></div><div><label>Vrácené množství</label><input id="returnQty" inputmode="decimal"></div><div><label>Výstupní kód</label><input id="returnOutputCode"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('returnOutputCode').value=v})">📷 Skenovat QR</button></div><div><label>Poznámka</label><input id="returnNote"></div></div><label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input id="returnClose" type="checkbox" style="width:auto"> Uzavřít zakázku po tomto návratu (zbytek bude zaevidován jako skutečná ztráta)</label><div class="actions"><button class="good" onclick="returnJob()">📥 Přijmout návrat</button></div><div id="returnStatus"></div></div></div>
 <div class="card"><h2>Zakázky</h2><div class="actions"><button class="secondary" onclick="loadJobs()">Obnovit</button></div><div id="jobsList">Načítám…</div></div></section>
 <section id="tab-companies" class="section"><div class="grid grid-2"><div class="card"><h2>Nová firma</h2><div><label>Název</label><input id="companyName"></div><div class="actions"><button class="good" onclick="createCompany()">➕ Přidat firmu</button></div><div id="companyStatus"></div></div><div class="card"><h2>Inventura u firmy</h2><div class="form-grid"><div><label>Firma</label><select id="checkCompany"></select></div><div><label>Kód položky</label><input id="checkCode"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('checkCode').value=v})">📷 Skenovat QR</button></div><div><label>Fyzicky zjištěno</label><input id="checkQty" inputmode="decimal"></div><div><label>Poznámka</label><input id="checkNote"></div></div><div class="actions"><button class="danger" onclick="externalCheck()">⚖️ Porovnat a zapsat rozdíl</button></div><div id="checkStatus"></div></div></div><div class="card"><h2>Materiál u firem</h2><div class="actions"><button class="secondary" onclick="loadCompanyBalances()">Obnovit</button></div><div id="companyBalances">Načítám…</div></div></section>
+<section id="tab-jobs" class="section">
+<div class="card">
+  <div class="jobs-head"><div><h2>Kontrola zakázek</h2><p class="muted">Vyber zlatníka, projdi skutečně zkontrolované zakázky a změny ulož. Otevření zakázky ji samo o sobě neschválí.</p></div><div class="jobs-count" id="jobReviewCount">Zkontrolováno v této kontrole: 0</div></div>
+  <div class="form-grid">
+    <div><label>Zlatník</label><select id="jobWorkerFilter"><option value="">Načítám…</option></select></div>
+    <div><label>Měsíc vytvoření</label><input id="jobMonthFilter" type="month"></div>
+    <div><label>Stav</label><select id="jobStatusFilter"><option value="ALL">Všechny</option><option value="KE KONTROLE">Ke kontrole</option><option value="UPRAVENO">Upraveno – čeká na kontrolu</option><option value="SCHVÁLENA">Schválené</option><option value="ČEKÁ NA DOPLNĚNÍ">Čeká na doplnění</option></select></div>
+  </div>
+  <div class="actions"><button class="primary" onclick="loadInternalJobs()">Zobrazit zakázky</button><button class="secondary" onclick="clearVisitedJobs()">Vynulovat výběr kontroly</button></div>
+  <div id="internalJobsList" style="margin-top:18px">Načítám…</div>
+  <div class="review-footer"><div><strong id="reviewFooterCount">0 zakázek označeno jako prošlé</strong><p class="muted">Do schválení se zahrnou jen zakázky, které jsi otevřela v tomto průchodu.</p></div><button class="good" id="completeReviewBtn" onclick="completeJobReview()" disabled>✓ DOKONČIT KONTROLU</button></div>
+  <div id="internalJobsStatus"></div>
+</div>
+<div class="card">
+  <h2>Měsíční výkaz</h2>
+  <p class="muted">Součty vycházejí z uložených zakázek. Prázdná cena se do součtu nezapočítá a je samostatně uvedena.</p>
+  <div class="form-grid">
+    <div><label>Měsíc</label><input id="reportMonth" type="month"></div>
+    <div><label>Zlatník</label><select id="reportWorkerFilter"><option value="">Všichni aktivní zlatníci</option></select></div>
+    <div><label>Rozsah výkazu</label><select id="reportIncludePending"><option value="true">Všechny zakázky včetně rozpracovaných</option><option value="false">Pouze schválené zakázky</option></select></div>
+  </div>
+  <div class="actions"><button class="primary" onclick="loadInternalJobReport()">Vytvořit výkaz</button><button class="secondary" onclick="printInternalJobReport()">🖨️ VYTISKNOUT VÝKAZ</button></div>
+  <div id="internalJobReport">Vyber měsíc a vytvoř výkaz.</div>
+</div>
+<div class="card hidden" id="internalJobEditor">
+  <div class="jobs-head"><div><h2>Úprava zakázky <span id="jobEditId"></span></h2><p class="muted">Změna gramáže upraví osobní sklad pouze o rozdíl. Cena sklad neovlivňuje.</p></div><button class="secondary small" onclick="closeInternalJobEditor()">Zavřít</button></div>
+  <input type="hidden" id="jobEditKey">
+  <div class="form-grid">
+    <div><label>Číslo zakázky</label><input id="jobEditNumber"></div>
+    <div><label>Vydané zlato / položka</label><select id="jobEditGoldCode"><option value="">Bez výdeje zlata</option></select></div>
+    <div><label>Gramáž vydaného zlata (g)</label><input id="jobEditGrams" inputmode="decimal"></div>
+    <div><label>Cena práce (Kč)</label><input id="jobEditPrice" inputmode="decimal" placeholder="Nech prázdné, pokud není známa"></div>
+    <div><label>Poznámka</label><textarea id="jobEditNote" rows="2"></textarea></div>
+    <div><label>Stav kontroly</label><select id="jobEditReviewStatus"><option value="KE KONTROLE">Ke kontrole</option><option value="ČEKÁ NA DOPLNĚNÍ">Čeká na doplnění</option><option value="UPRAVENO">Upraveno – čeká na kontrolu</option><option value="SCHVÁLENA" disabled>Schválená (schvaluje se tlačítkem dole)</option></select></div>
+  </div>
+  <div class="actions"><button class="good" onclick="saveInternalJobEdit()">Uložit změny</button><button class="secondary" onclick="closeInternalJobEditor()">Zrušit</button></div>
+  <div id="jobEditStatus"></div>
+</div>
+<div class="card hidden" id="printReportContainer"></div>
+</section>
 <section id="tab-history" class="section"><div class="card"><h2>Historie pohybů</h2><div class="actions"><button class="secondary" onclick="loadHistory()">Obnovit</button></div><div id="historyList">Načítám…</div></div></section>
 <section id="tab-users" class="section"><div class="grid grid-2"><div class="card"><h2>Nový uživatel</h2><div class="form-grid"><div><label>Jméno</label><input id="userName"></div><div><label>Role</label><select id="userRole"><option>WORKER</option><option>ADMIN</option></select></div></div><div class="actions"><button class="good" onclick="createUser()">➕ Vytvořit uživatele</button></div><div id="userStatus"></div></div><div class="card"><h2>Uživatelé</h2><div id="usersList">Načítám…</div></div></div></section>
 <section id="tab-devices" class="section"><div class="card"><h2>Zařízení</h2><div class="actions"><button class="secondary" onclick="loadDevices()">Obnovit</button></div><div id="devicesList">Načítám…</div></div></section>
@@ -58,7 +98,6 @@ async function showReceiveMode(){
   const code=val('receiveCode');
   const info=document.getElementById('receiveItemInfo');
   if(!code){
-    document.getElementById('receiveBatchField').classList.add('hidden');
     document.getElementById('receiveCtField').classList.remove('hidden');
     document.getElementById('receiveQtyHint').textContent='(ks / g podle položky)';
     if(info)info.innerHTML='';
@@ -70,7 +109,6 @@ async function showReceiveMode(){
     const i=r.item;
     const metal=i.kategorie!=='KÁMEN';
     document.getElementById('receiveCtField').classList.toggle('hidden',metal);
-    document.getElementById('receiveBatchField').classList.toggle('hidden',!metal);
     document.getElementById('receiveQtyHint').textContent=metal?'(g)':'(ks)';
     if(info){
       const title=metal
@@ -86,7 +124,6 @@ async function showReceiveMode(){
       : 'Přidej počet kusů a případně celkem ct. Systém vše připíše do stejné položky a zachová výpočet průměrné ct/ks.';
   }catch(e){
     document.getElementById('receiveCtField').classList.remove('hidden');
-    document.getElementById('receiveBatchField').classList.add('hidden');
     document.getElementById('receiveQtyHint').textContent='(ks / g podle položky)';
     if(info)info.innerHTML='<div class="status error" style="margin:12px 0 0">Kód položky nebyl nalezen. Nejprve položku vytvoř.</div>';
     document.getElementById('receiveModeHint').textContent='';
@@ -134,15 +171,12 @@ function renderMetalDetail(m){
   document.getElementById('metalDetail').innerHTML=`<div class="muted" style="margin-bottom:10px">Součet evidovaného kovu/materiálu: centrální sklad + materiál u zlatnic + otevřené zůstatky u firem.</div><div class="table-wrap"><table class="table"><thead><tr><th>Umístění</th><th>Druh</th><th>Kód</th><th>Ryzost</th><th>Barva</th><th>Forma</th><th>Hmotnost</th><th>Čisté Au</th><th>14k ekvivalent</th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="muted">V evidenci zatím není žádný kov / materiál s hmotností.</td></tr>'}</tbody></table></div><div class="muted" style="margin-top:10px">Celkem fyzicky: ${num(t.grams,3)} g · známé čisté Au: ${num(t.pureAuG,3)} g · známý 14k ekvivalent: ${num(t.equivalent14kG,3)} g</div>${unknown}`;
 }
 
-async function centralSearch(){const code=document.getElementById('centralSearchCode').value.trim();if(!code){showStatus('centralSearchStatus','Zadej kód.','error');return}try{const r=await api('searchItem',{code});document.getElementById('centralSearchResult').innerHTML=renderCentralItem(r);showStatus('centralSearchStatus','Nalezeno.','ok')}catch(e){showStatus('centralSearchStatus','Chyba: '+e.message,'error')}}
+async function centralSearch(){const code=document.getElementById('centralSearchCode').value.trim();if(!code){showStatus('centralSearchStatus','Zadej kód.','error');return}try{const r=await api('searchItem',{code});document.getElementById('centralSearchResult').innerHTML=renderCentralItem(r);showStatus('centralSearchStatus','Nalezeno.','ok')}catch(e){showStatus('centralSearchStatus','Chyba: '+internalJobErrorText(e),'error')}}
 async function createItem(){
-  let printWindow=null;
   try{
-    // Popup otevřeme ještě před await, aby ho prohlížeč neblokoval.
-    printWindow=window.open('about:blank','_blank');
     const category=val('newCategory');
     const r=await api('createItem',{category,type:val('newType'),size:val('newSize'),color:val('newColor'),clarity:val('newClarity'),fineness:nOrNull('newFineness'),metalColor:val('newMetalColor'),form:val('newForm'),position:val('newPosition'),note:val('newNote')});
-    const url='print-label.html?code='+encodeURIComponent(r.kod);
+    const url='print-label.html?code='+encodeURIComponent(r.kod)+'&autoprint=1';
     const el=document.getElementById('createItemStatus');
     el.className='status ok';
     el.innerHTML='Vytvořeno <strong>'+esc(r.kod)+'</strong>. <button id="printNewItemQr" class="small secondary">🖨️ Vytisknout QR</button>';
@@ -151,14 +185,12 @@ async function createItem(){
     centralSearch();
     loadCentral();
     syncNewCategory();
-    if(printWindow && !printWindow.closed){
-      printWindow.location.href=url;
-    }else{
+    const w=window.open(url,'_blank');
+    if(!w){
       el.innerHTML='Vytvořeno <strong>'+esc(r.kod)+'</strong>. Prohlížeč zablokoval tiskové okno. <button id="printNewItemQr" class="small secondary">🖨️ Vytisknout QR</button>';
       document.getElementById('printNewItemQr').onclick=()=>window.open(url,'_blank');
     }
   }catch(e){
-    if(printWindow && !printWindow.closed)printWindow.close();
     const msg=e.message==='DUPLICATE_ITEM'
       ?'Tato položka už existuje. Použij „Příjem materiálu“ a přidej k ní množství.'
       :'Chyba: '+e.message;
@@ -170,14 +202,14 @@ async function receiveItem(){
     const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:document.getElementById('receiveCtField').classList.contains('hidden')?null:nOrNull('receiveCt'),note:val('receiveNote')});
     showStatus('receiveStatus','Příjem zapsán. Stav: '+num(r.item.pocet)+' '+r.item.jednotka+(r.batchId?' · Šarže '+r.batchId:''),'ok');
     loadCentral();loadOverview();showReceiveMode();
-  }catch(e){showStatus('receiveStatus','Chyba: '+e.message,'error')}
+  }catch(e){showStatus('receiveStatus','Chyba: '+internalJobErrorText(e),'error')}
 }
 async function adjustItem(){
   try{
     const r=await api('adjust',{code:val('adjustCode'),qtyDelta:n('adjustQty'),ctDelta:document.getElementById('adjustCtField').classList.contains('hidden')?null:nOrNull('adjustCt'),batchId:val('adjustBatch'),note:val('adjustNote')});
     showStatus('adjustStatus','Korekce zapsána. Nový stav: '+num(r.item.pocet)+' '+r.item.jednotka+(r.batchId?' · Šarže '+r.batchId:''),'ok');
     loadCentral();loadOverview();loadAdjustBatches();
-  }catch(e){showStatus('adjustStatus','Chyba: '+e.message,'error')}
+  }catch(e){showStatus('adjustStatus','Chyba: '+internalJobErrorText(e),'error')}
 }
 async function loadCentral(){
   try{
@@ -209,18 +241,18 @@ async function loadWorkers(){
   }catch(e){document.getElementById('workersList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
 async function loadCompanies(){const r=await api('listCompanies');companies=r.rows;const sels=['jobCompany','checkCompany'];sels.forEach(id=>{document.getElementById(id).innerHTML=companies.filter(x=>x.active).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')})}
-async function createCompany(){try{const r=await api('createCompany',{name:val('companyName')});showStatus('companyStatus','Firma '+r.name+' vytvořena.','ok');document.getElementById('companyName').value='';await loadCompanies()}catch(e){showStatus('companyStatus','Chyba: '+e.message,'error')}}
+async function createCompany(){try{const r=await api('createCompany',{name:val('companyName')});showStatus('companyStatus','Firma '+r.name+' vytvořena.','ok');document.getElementById('companyName').value='';await loadCompanies()}catch(e){showStatus('companyStatus','Chyba: '+internalJobErrorText(e),'error')}}
 async function createJob(){
   try{
     const r=await api('createExternalJob',{companyId:val('jobCompany'),inputCode:val('jobInputCode'),batchId:val('jobBatch'),outputCode:val('jobOutputCode'),qty:n('jobQty'),expectedLossPct:nOrNull('jobLoss'),processType:val('jobType'),note:val('jobNote')});
     showStatus('jobStatus','Zakázka '+r.jobId+' vytvořena. Odesláno: '+num(r.qty)+(r.batchId?' ze šarže '+r.batchId:''),'ok');loadJobs();loadCompanyBalances();loadOverview();loadJobBatches();
-  }catch(e){showStatus('jobStatus','Chyba: '+e.message,'error')}
+  }catch(e){showStatus('jobStatus','Chyba: '+internalJobErrorText(e),'error')}
 }
 async function returnJob(){
   try{
     const r=await api('returnExternal',{jobId:val('returnJobId'),qty:n('returnQty'),outputCode:val('returnOutputCode'),closeJob:document.getElementById('returnClose').checked,note:val('returnNote')});
     showStatus('returnStatus','Návrat zapsán. Skutečná ztráta: '+num(r.actualLoss)+' ('+num(r.actualLossPct,2)+' %).'+(r.status==='CLOSED'?' Zakázka uzavřena.':''),'ok');loadJobs();loadCompanyBalances();loadOverview();
-  }catch(e){showStatus('returnStatus','Chyba: '+e.message,'error')}
+  }catch(e){showStatus('returnStatus','Chyba: '+internalJobErrorText(e),'error')}
 }
 async function loadJobs(){
   try{
@@ -230,7 +262,7 @@ async function loadJobs(){
   }catch(e){document.getElementById('jobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
 async function loadCompanyBalances(){try{const r=await api('externalOverview');document.getElementById('companyBalances').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Firma</th><th>Kód</th><th>Materiál u firmy</th><th>Stav inventury</th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td>${esc(x.company)}</td><td><strong>${esc(x.code)}</strong></td><td>${num(x.qty)} ${esc(x.unit)}</td><td>${x.flag?'<span class="badge '+(x.flag==='OK'?'good':'bad')+'">'+esc(x.flag)+'</span>':'—'}</td></tr>`).join('')+'</tbody></table></div>'}catch(e){document.getElementById('companyBalances').innerHTML='<div class="error-box">'+esc(e.message)+'</div>'}}
-async function externalCheck(){try{const r=await api('externalInventoryCheck',{companyId:val('checkCompany'),code:val('checkCode'),physicalQty:n(val('checkQty')),note:val('checkNote')});showStatus('checkStatus','Systém: '+num(r.systemQty)+' · fyzicky: '+num(r.physicalQty)+' · rozdíl: '+num(r.delta)+'. Korekce byla zapsána.','ok');loadCompanyBalances();loadOverview()}catch(e){showStatus('checkStatus','Chyba: '+e.message,'error')}}
+async function externalCheck(){try{const r=await api('externalInventoryCheck',{companyId:val('checkCompany'),code:val('checkCode'),physicalQty:n(val('checkQty')),note:val('checkNote')});showStatus('checkStatus','Systém: '+num(r.systemQty)+' · fyzicky: '+num(r.physicalQty)+' · rozdíl: '+num(r.delta)+'. Korekce byla zapsána.','ok');loadCompanyBalances();loadOverview()}catch(e){showStatus('checkStatus','Chyba: '+internalJobErrorText(e),'error')}}
 async function loadHistory(){
   try{
     const r=await api('history',{limit:200});
@@ -249,8 +281,8 @@ async function loadUsers(){
     syncRegRole();
   }catch(e){document.getElementById('usersList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
-async function createUser(){try{const r=await api('createUser',{name:val('userName'),role:val('userRole')});showStatus('userStatus','Uživatel '+r.name+' vytvořen.','ok');document.getElementById('userName').value='';loadUsers()}catch(e){showStatus('userStatus','Chyba: '+e.message,'error')}}
-async function toggleUser(id,active){try{await api('setUserActive',{userId:id,active});loadUsers();showStatus('userStatus',active?'Uživatel aktivován.':'Uživatel deaktivován.','ok')}catch(e){showStatus('userStatus','Chyba: '+e.message,'error')}}
+async function createUser(){try{const r=await api('createUser',{name:val('userName'),role:val('userRole')});showStatus('userStatus','Uživatel '+r.name+' vytvořen.','ok');document.getElementById('userName').value='';loadUsers()}catch(e){showStatus('userStatus','Chyba: '+internalJobErrorText(e),'error')}}
+async function toggleUser(id,active){try{await api('setUserActive',{userId:id,active});loadUsers();showStatus('userStatus',active?'Uživatel aktivován.':'Uživatel deaktivován.','ok')}catch(e){showStatus('userStatus','Chyba: '+internalJobErrorText(e),'error')}}
 async function loadDevices(){
   try{
     const r=await api('listDevices');
@@ -259,11 +291,113 @@ async function loadDevices(){
   }catch(e){document.getElementById('devicesList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
 }
 async function toggleDevice(id,active){try{await api('setDeviceActive',{deviceIdTarget:id,active});loadDevices()}catch(e){alert(e.message)}}
-async function makeRegistration(){try{const r=await api('createRegistration',{userId:val('regUser'),role:val('regRole')});document.getElementById('registrationCodeBox').innerHTML=`<div style="font-size:30px;font-weight:800;letter-spacing:.08em">${esc(r.code)}</div><div class="muted" style="margin-top:8px">Pro: ${esc(r.name)} · ${esc(r.role)}<br>Platnost do: ${esc(r.expiresAt)}</div><div class="actions" style="justify-content:center"><button class="secondary" onclick="navigator.clipboard?.writeText('${esc(r.code)}')">Kopírovat</button></div>`;showStatus('registrationStatus','Kód je vytvořen. Předávej ho jen konkrétnímu uživateli.','ok')}catch(e){showStatus('registrationStatus','Chyba: '+e.message,'error')}}
+async function makeRegistration(){try{const r=await api('createRegistration',{userId:val('regUser'),role:val('regRole')});document.getElementById('registrationCodeBox').innerHTML=`<div style="font-size:30px;font-weight:800;letter-spacing:.08em">${esc(r.code)}</div><div class="muted" style="margin-top:8px">Pro: ${esc(r.name)} · ${esc(r.role)}<br>Platnost do: ${esc(r.expiresAt)}</div><div class="actions" style="justify-content:center"><button class="secondary" onclick="navigator.clipboard?.writeText('${esc(r.code)}')">Kopírovat</button></div>`;showStatus('registrationStatus','Kód je vytvořen. Předávej ho jen konkrétnímu uživateli.','ok')}catch(e){showStatus('registrationStatus','Chyba: '+internalJobErrorText(e),'error')}}
 function syncRegRole(){const s=document.getElementById('regUser');if(!s||!s.selectedOptions.length)return;document.getElementById('regRole').value=s.selectedOptions[0].dataset.role||'WORKER'}
 function val(id){return document.getElementById(id).value.trim()}function n(id){const v=Number(val(id).replace(',','.'));if(!Number.isFinite(v)||v===0)throw new Error('INVALID_NUMBER');return v}function nOrNull(id){const s=val(id);if(!s)return null;const v=Number(s.replace(',','.'));if(!Number.isFinite(v))throw new Error('INVALID_NUMBER');return v}
-function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central')loadCentral();if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
+
+let internalJobsCache=[];
+let visitedInternalJobIds=new Set();
+let currentInternalJob=null;
+function currentMonthValue(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function internalJobErrorText(e){
+  const m=String(e&&e.message||e);
+  const map={INSUFFICIENT_PERSONAL_STOCK:'Zlatník nemá na osobním skladu dostatek zlata pro tuto gramáž.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka nebyla nalezena.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',JOB_NOT_FOUND:'Zakázka už neexistuje.'};
+  return map[m]||m;
+}
+function jobStatusBadge(status){const good=status==='SCHVÁLENA';const warning=status==='UPRAVENO'||status==='ČEKÁ NA DOPLNĚNÍ';return `<span class="badge ${good?'good':warning?'bad':''}">${esc(status||'KE KONTROLE')}</span>`}
+function jobMoney(v){return v===null||v===undefined?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(v)}
+function syncVisitedJobs(){const count=visitedInternalJobIds.size;document.getElementById('jobReviewCount').textContent='Zkontrolováno v této kontrole: '+count;document.getElementById('reviewFooterCount').textContent=count+' zakázek označeno jako prošlé';document.getElementById('completeReviewBtn').disabled=count===0}
+async function initInternalJobs(){
+  const month=currentMonthValue();
+  ['jobMonthFilter','reportMonth'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=month});
+  try{
+    const r=await api('listInternalJobs',{month:'',userId:'',status:'ALL'});
+    const users=r.users||[];
+    const opts=users.map(u=>`<option value="${esc(u.id)}">${esc(u.name)}${u.active===false?' · neaktivní':''}</option>`).join('');
+    document.getElementById('jobWorkerFilter').innerHTML=opts||'<option value="">Žádní aktivní zlatníci</option>';
+    document.getElementById('reportWorkerFilter').innerHTML='<option value="">Všichni aktivní zlatníci</option>'+opts;
+    if(users.length)document.getElementById('jobWorkerFilter').value=users[0].id;
+    await loadInternalJobs();
+  }catch(e){document.getElementById('internalJobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}
+async function loadInternalJobs(){
+  try{
+    const r=await api('listInternalJobs',{userId:document.getElementById('jobWorkerFilter').value,month:document.getElementById('jobMonthFilter').value,status:document.getElementById('jobStatusFilter').value});
+    internalJobsCache=r.rows||[];
+    const rows=internalJobsCache.map(j=>`<tr class="${visitedInternalJobIds.has(j.id)?'job-visited':''}"><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div></td><td>${esc(j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${num(j.grams,3)} g</td><td>${jobMoney(j.price)}</td><td>${jobStatusBadge(j.status)}</td><td><button class="small secondary" onclick="openInternalJobEditor('${esc(j.id)}')">${visitedInternalJobIds.has(j.id)?'Otevřít znovu':'Otevřít / kontrolovat'}</button></td></tr>`).join('');
+    document.getElementById('internalJobsList').innerHTML=rows?`<div class="table-wrap"><table class="table jobs-table"><thead><tr><th>Datum</th><th>Zakázka / ID</th><th>Typ</th><th>Ryzost</th><th>Zlato</th><th>Cena práce</th><th>Stav</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">Pro vybraný filtr zatím nejsou žádné zakázky.</p>';
+    syncVisitedJobs();
+  }catch(e){document.getElementById('internalJobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}
+async function openInternalJobEditor(id){
+  const j=internalJobsCache.find(x=>x.id===id);if(!j)return;
+  currentInternalJob=j;visitedInternalJobIds.add(j.id);syncVisitedJobs();
+  document.getElementById('jobEditKey').value=j.id;document.getElementById('jobEditId').textContent=j.id;
+  document.getElementById('jobEditNumber').value=j.jobNumber||'';document.getElementById('jobEditGrams').value=String(j.grams).replace('.',',');
+  document.getElementById('jobEditPrice').value=j.price===null?'':String(j.price).replace('.',',');document.getElementById('jobEditNote').value=j.note||'';
+  const statusSelect=document.getElementById('jobEditReviewStatus');statusSelect.value=j.status;if(!statusSelect.value)statusSelect.value='KE KONTROLE';
+  document.getElementById('jobEditGoldCode').innerHTML='<option value="">Bez výdeje zlata</option>';
+  if(j.goldCode)document.getElementById('jobEditGoldCode').innerHTML+=`<option value="${esc(j.goldCode)}">${esc(j.goldCode)} · ${esc(j.fineness||'')}/1000 · aktuální zakázka</option>`;
+  const editor=document.getElementById('internalJobEditor');editor.classList.remove('hidden');editor.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('jobEditStatus').innerHTML=`<p class="muted">${esc(j.worker)} · ${esc(j.type)} · ${esc(j.created)} · stav: ${esc(j.status)}</p>`;
+  await loadAdminJobGoldOptions(j);
+  loadInternalJobs();
+}
+
+async function loadAdminJobGoldOptions(job){
+  const select=document.getElementById('jobEditGoldCode');
+  try{
+    const r=await api('adminJobGoldOptions',{userId:job.userId});
+    const existing=job.goldCode?`<option value="${esc(job.goldCode)}">${esc(job.goldCode)} · ${esc(job.fineness||'')}/1000 · aktuální zakázka</option>`:'';
+    const available=(r.options||[]).filter(o=>o.code!==job.goldCode).map(o=>`<option value="${esc(o.code)}">${esc(o.label)}</option>`).join('');
+    select.innerHTML='<option value="">Bez výdeje zlata</option>'+existing+available;
+    select.value=job.goldCode||'';
+  }catch(e){
+    if(job.goldCode)select.innerHTML=`<option value="${esc(job.goldCode)}">${esc(job.goldCode)} · aktuální zakázka</option>`;
+    showStatus('jobEditStatus','Seznam zlata se nepodařilo načíst: '+e.message,'error');
+  }
+}
+function closeInternalJobEditor(){document.getElementById('internalJobEditor').classList.add('hidden');currentInternalJob=null}
+async function saveInternalJobEdit(){
+  const id=document.getElementById('jobEditKey').value;
+  const parse=(v)=>{if(String(v).trim()==='')return '';const n=Number(String(v).replace(',','.'));if(!Number.isFinite(n))throw new Error('Zadej platné číslo.');return n};
+  try{
+    const grams=parse(document.getElementById('jobEditGrams').value),price=parse(document.getElementById('jobEditPrice').value);
+    if(grams==='')throw new Error('Gramáž nesmí být prázdná. Pokud se zlato nepoužilo, zadej 0.');
+    const r=await api('updateInternalJob',{jobId:id,jobNumber:document.getElementById('jobEditNumber').value.trim(),goldCode:document.getElementById('jobEditGoldCode').value,grams,price,note:document.getElementById('jobEditNote').value.trim(),reviewStatus:document.getElementById('jobEditReviewStatus').value});
+    showStatus('jobEditStatus',r.changed?'Změny uloženy. Gramáž skladu upravena pouze o rozdíl.':'Uloženo bez změny hodnot.','ok');
+    await loadInternalJobs();await loadInternalJobReport();
+  }catch(e){showStatus('jobEditStatus','Chyba: '+internalJobErrorText(e),'error')}
+}
+function clearVisitedJobs(){visitedInternalJobIds.clear();syncVisitedJobs();loadInternalJobs();showStatus('internalJobsStatus','Výběr kontroly vynulován.','info')}
+async function completeJobReview(){
+  const ids=Array.from(visitedInternalJobIds);if(!ids.length)return;
+  if(!confirm('Schválit '+ids.length+' otevřených zakázek, které jsi v tomto průchodu zkontrolovala?'))return;
+  try{const r=await api('completeInternalJobReview',{jobIds:ids});visitedInternalJobIds.clear();showStatus('internalJobsStatus','Kontrola dokončena. Schváleno zakázek: '+r.updated+'.','ok');await loadInternalJobs();await loadInternalJobReport();}catch(e){showStatus('internalJobsStatus','Chyba: '+internalJobErrorText(e),'error')}
+}
+async function loadInternalJobReport(){
+  const month=document.getElementById('reportMonth').value;if(!month){document.getElementById('internalJobReport').innerHTML='<p class="muted">Vyber měsíc.</p>';return}
+  try{
+    const r=await api('internalJobReport',{month,userId:document.getElementById('reportWorkerFilter').value,includePending:document.getElementById('reportIncludePending').value==='true'});
+    const t=r.totals;
+    const rows=r.jobs.map(j=>`<tr><td>${esc(j.created)}</td><td>${esc(j.worker)}</td><td>${esc(j.jobNumber||'—')}</td><td>${esc(j.type)}</td><td>${num(j.grams,3)} g</td><td>${jobMoney(j.price)}</td><td>${jobStatusBadge(j.status)}</td></tr>`).join('');
+    document.getElementById('internalJobReport').innerHTML=`<div class="grid grid-4 report-stats"><div class="panel"><div class="muted">Zakázky</div><div class="qty">${t.count}</div></div><div class="panel"><div class="muted">Opravy / výroba</div><div class="qty">${t.repairs} / ${t.manufacture}</div></div><div class="panel"><div class="muted">Vydané zlato</div><div class="qty">${num(t.grams,3)} g</div></div><div class="panel"><div class="muted">Součet cen</div><div class="qty">${jobMoney(t.value)}</div></div></div><p class="muted">Bez zadané ceny: ${t.missingPrice} · Neuzavřené ke kontrole: ${t.pending}</p><div class="table-wrap"><table class="table" id="internalReportTable"><thead><tr><th>Datum</th><th>Zlatník</th><th>Zakázka</th><th>Typ</th><th>Gramy</th><th>Cena práce</th><th>Stav</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Bez zakázek v tomto výběru.</td></tr>'}</tbody></table></div>`;
+  }catch(e){document.getElementById('internalJobReport').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}
+function printInternalJobReport(){
+  const content=document.getElementById('internalJobReport').innerHTML;
+  if(!content||content.includes('Vyber měsíc a vytvoř výkaz')){alert('Nejdřív vytvoř výkaz.');return}
+  const month=document.getElementById('reportMonth').value;
+  const worker=document.getElementById('reportWorkerFilter').selectedOptions[0]?.textContent||'Všichni';
+  const w=window.open('','_blank','width=1000,height=750');if(!w){alert('Prohlížeč zablokoval tiskové okno. Povol vyskakovací okna pro tuto stránku.');return}
+  w.document.write(`<!doctype html><html lang="cs"><head><meta charset="utf-8"><title>Měsíční výkaz ${esc(month)}</title><style>body{font:13px Arial,sans-serif;color:#111;padding:24px}h1{font-size:22px}table{border-collapse:collapse;width:100%;margin-top:16px}th,td{border:1px solid #bbb;padding:7px;text-align:left}th{background:#eee}.grid{display:flex;gap:10px;margin:15px 0}.panel{border:1px solid #bbb;padding:10px;flex:1}.muted{color:#555}.badge{border:1px solid #999;padding:2px 5px}button{display:none}</style></head><body><h1>Měsíční výkaz zakázek</h1><p>Měsíc: ${esc(month)} · Zlatník: ${esc(worker)}</p>${content}<p>Vygenerováno ${new Date().toLocaleString('cs-CZ')}</p><script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central')loadCentral();if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='jobs')initInternalJobs();if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
 document.getElementById('regUser').addEventListener('change',syncRegRole);
+['jobWorkerFilter','jobMonthFilter','jobStatusFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',()=>{visitedInternalJobIds.clear();syncVisitedJobs();loadInternalJobs()})});
+['reportMonth','reportWorkerFilter','reportIncludePending'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',loadInternalJobReport)});
 document.getElementById('newCategory').addEventListener('change',syncNewCategory);
 syncNewCategory();
 
