@@ -1,7 +1,7 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body>
-<header><div class="header-inner"><div class="brand"><h1>Sklad materiálu</h1><p id="who">Pracovník</p></div><div class="top-actions"><span id="conn" class="badge">Kontrola…</span><button class="small secondary" onclick="clearAuth();go('index.html')">Odhlásit zařízení</button></div></div></header>
-<main class="container">
-  <div class="nav"><button class="active" data-tab="job">🛠️ Nová zakázka</button><button data-tab="search">🔎 Hledat</button><button data-tab="mine">📦 Můj stav</button><button data-tab="myjobs">📋 Moje zakázky</button></div>
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="worker.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body class="worker-page">
+<header class="worker-header"><div class="worker-header-inner"><div class="worker-brand"><div class="worker-mark">ZK</div><div><div class="worker-kicker">ZLATNICKÁ DÍLNA KONEČNÍ</div><h1>Sklad a zakázky</h1><p id="who">Pracovník</p></div></div><div class="worker-top-actions"><span id="conn" class="worker-connection">Kontrola…</span><button class="worker-logout" onclick="clearAuth();go('index.html')">Odhlásit</button></div></div></header>
+<main class="container worker-main">
+  <div class="nav worker-nav"><button class="active" data-tab="job">🛠️ Nová zakázka</button><button data-tab="search">🔎 Hledat</button><button data-tab="mine">📦 Můj stav</button><button data-tab="myjobs">📋 Moje zakázky</button></div>
   <section id="tab-job" class="section active">
     <div class="card job-create-card">
       <div class="job-create-intro"><div><p class="eyebrow">ZLATNICKÁ DÍLNA</p><h2>Zapsat zakázku</h2><p class="muted">Zlato se odečte z tvého osobního skladu pouze tehdy, když ho skutečně vydáš na práci.</p></div><div class="job-create-symbol">✦</div></div>
@@ -13,6 +13,13 @@
         <div><label>Vydané zlato (g) <span id="jobGramsRequired" class="muted">volitelné</span></label><input id="jobGrams" inputmode="decimal" placeholder="0,00"><p class="muted field-hint">U opravy může zůstat prázdné. U výroby je gramáž povinná.</p></div>
         <div><label>Cena práce (Kč) <span class="muted">nepovinné</span></label><input id="jobPrice" inputmode="decimal" placeholder="Doplní se později"></div>
         <div class="span-all"><label>Poznámka <span class="muted">nepovinná</span></label><textarea id="jobNote" rows="2" placeholder="Např. leštění, rovnání, výroba pro sklad…"></textarea></div>
+      </div>
+      <div class="worker-stone-toggle"><label class="worker-check-label" for="includeJobStones"><input id="includeJobStones" type="checkbox" onchange="toggleJobStones()"><span class="worker-custom-check"></span><span><strong>Odevzdávám také kameny</strong><small>Jen pokud na zakázku skutečně vydáváš kameny ze svého osobního skladu.</small></span></label></div>
+      <div id="jobStonesPanel" class="worker-stones-panel hidden">
+        <div class="worker-stones-heading"><div><h3>Kameny k zakázce</h3><p>Vyber skladovou položku a počet kusů. Zásoba se odečte až po potvrzení zakázky.</p></div><span class="worker-stones-icon">◇</span></div>
+        <div class="worker-stone-add-row"><div><label for="jobStoneCode">Kámen z osobního skladu</label><select id="jobStoneCode"><option value="">Načítám kameny…</option></select></div><div><label for="jobStoneQty">Počet kusů</label><input id="jobStoneQty" type="number" min="1" step="1" value="1" inputmode="numeric"></div><div class="worker-stone-add-button"><label>&nbsp;</label><button type="button" class="worker-secondary-button" onclick="addJobStone()">+ Přidat kámen</button></div></div>
+        <div id="jobStoneSelectionList" class="worker-stone-selection-list"><p class="worker-muted">Zatím nebyly vybrány žádné kameny.</p></div>
+        <p id="jobStoneStockHint" class="worker-field-hint">Kameny se vybírají pouze z tvého osobního skladu.</p>
       </div>
       <div class="job-stock-note"><span class="stock-note-icon">✓</span><div><strong>Kontrola osobního skladu</strong><p id="jobStockSummary" class="muted">Načítám dostupné zlato…</p></div></div>
       <div class="actions"><button id="createJobButton" class="primary job-submit" onclick="submitInternalJob()">POTVRDIT VÝDEJ</button></div>
@@ -80,13 +87,46 @@ async function loadJobGoldOptions(){
 }
 function jobErrorText(e){
   const m=String(e&&e.message||e);
-  const map={INSUFFICIENT_PERSONAL_STOCK:'Na osobním skladu není dostatek zlata.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka už neexistuje.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',RATE_LIMIT:'Příliš mnoho požadavků. Chvíli počkej a zkus to znovu.'};
+  const map={INSUFFICIENT_PERSONAL_STOCK:'Na osobním skladu není dostatek zlata.',INSUFFICIENT_PERSONAL_STONES:'Na osobním skladu není dostatek vybraných kamenů.',INVALID_STONES:'Zkontroluj výběr kamenů a počet kusů.',INVALID_STONE_ITEM:'Vybraná položka není evidovaný kámen.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka už neexistuje.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',RATE_LIMIT:'Příliš mnoho požadavků. Chvíli počkej a zkus to znovu.'};
   return map[m]||m;
 }
 function updateJobStockHint(){
   const select=document.getElementById('jobGoldCode'),o=workerGoldOptions.find(x=>x.code===select.value);
   document.getElementById('jobStockSummary').textContent=o?`K dispozici ${num(o.balance,3)} g · ryzost ${o.fineness}/1000 · kód ${o.code}`:'Není vybráno zlato. Bez výdeje se osobní sklad nezmění.';
 }
+let workerStoneOptions=[];
+let selectedJobStones=[];
+async function loadJobStoneOptions(){
+  try{
+    const r=await api('jobStoneOptions');workerStoneOptions=r.options||[];
+    const select=document.getElementById('jobStoneCode');
+    select.innerHTML=workerStoneOptions.length?'<option value="">Vyber kámen…</option>'+workerStoneOptions.map(o=>`<option value="${esc(o.code)}" data-balance="${o.balance}">${esc(o.label)}</option>`).join(''):'<option value="">Na osobním skladu nemáš žádné kameny</option>';
+    renderSelectedJobStones();
+  }catch(e){document.getElementById('jobStoneCode').innerHTML='<option value="">Kameny se nepodařilo načíst</option>';showStatus('createJobStatus','Kameny se nepodařilo načíst: '+jobErrorText(e),'error')}
+}
+function toggleJobStones(){
+  const on=document.getElementById('includeJobStones').checked;
+  document.getElementById('jobStonesPanel').classList.toggle('hidden',!on);
+  if(on&&workerStoneOptions.length===0)loadJobStoneOptions();
+}
+function renderSelectedJobStones(){
+  const el=document.getElementById('jobStoneSelectionList');
+  if(!selectedJobStones.length){el.innerHTML='<p class="worker-muted">Zatím nebyly vybrány žádné kameny.</p>';return}
+  el.innerHTML=selectedJobStones.map(st=>{const o=workerStoneOptions.find(x=>x.code===st.code);return `<div class="worker-stone-selected"><div><strong>${esc(o?o.code:st.code)} · ${esc(o?([o.kind,o.size,o.color,o.clarity].filter(Boolean).join(' · ')):st.label||'Kámen')}</strong><small>${st.qty} ks · po výdeji zůstane ${num((o?o.balance:st.qty)-st.qty,0)} ks</small></div><button type="button" class="worker-remove-stone" onclick="removeJobStone('${esc(st.code)}')" aria-label="Odebrat kámen">×</button></div>`}).join('');
+}
+function addJobStone(){
+  const code=document.getElementById('jobStoneCode').value;
+  const qty=Number(document.getElementById('jobStoneQty').value);
+  const o=workerStoneOptions.find(x=>x.code===code);
+  if(!o){showStatus('createJobStatus','Vyber kámen ze svého osobního skladu.','error');return}
+  if(!Number.isInteger(qty)||qty<1){showStatus('createJobStatus','Počet kusů musí být celé číslo větší než nula.','error');return}
+  const existing=selectedJobStones.find(x=>x.code===code),newQty=qty+(existing?existing.qty:0);
+  if(newQty>o.balance){showStatus('createJobStatus','Na osobním skladu není dostatek kusů této položky.','error');return}
+  if(existing)existing.qty=newQty;else selectedJobStones.push({code,qty});
+  document.getElementById('jobStoneQty').value='1';renderSelectedJobStones();showStatus('createJobStatus','Kámen přidán do zakázky.','ok');
+}
+function removeJobStone(code){selectedJobStones=selectedJobStones.filter(x=>x.code!==code);renderSelectedJobStones()}
+
 async function submitInternalJob(){
   const btn=document.getElementById('createJobButton');
   const jobNumber=document.getElementById('jobNumber').value.trim();
@@ -95,6 +135,8 @@ async function submitInternalJob(){
   const rawPrice=document.getElementById('jobPrice').value.trim();
   const price=rawPrice===''?'':Number(rawPrice.replace(',','.'));
   const goldCode=document.getElementById('jobGoldCode').value;
+  const includeStones=document.getElementById('includeJobStones').checked;
+  if(includeStones&&selectedJobStones.length===0){showStatus('createJobStatus','Zaškrtl jsi odevzdání kamenů, ale žádný kámen jsi nepřidal.','error');return}
   if(currentJobType==='OPRAVA'&&!jobNumber){showStatus('createJobStatus','U opravy je číslo zakázky povinné.','error');return}
   if(!Number.isFinite(grams)||grams<0){showStatus('createJobStatus','Zadej platnou gramáž.','error');return}
   if(currentJobType==='VÝROBA'&&grams<=0){showStatus('createJobStatus','U výroby je gramáž povinná a musí být větší než nula.','error');return}
@@ -103,18 +145,18 @@ async function submitInternalJob(){
   if(rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('createJobStatus','Zadej platnou cenu nebo pole nech prázdné.','error');return}
   btn.disabled=true;btn.textContent='UKLÁDÁM…';
   try{
-    const r=await api('createInternalJob',{submissionKey:internalSubmissionKey,jobType:currentJobType,jobNumber,goldCode:grams>0?goldCode:'',grams,price,note:document.getElementById('jobNote').value.trim()});
+    const r=await api('createInternalJob',{submissionKey:internalSubmissionKey,jobType:currentJobType,jobNumber,goldCode:grams>0?goldCode:'',grams,price,note:document.getElementById('jobNote').value.trim(),stones:includeStones?selectedJobStones:[]});
     internalSubmissionKey=makeId();
-    showStatus('createJobStatus',r.duplicate?'Tato zakázka už byla uložena.':'Zakázka '+r.job.id+' byla uložena. Výdej zlata je zaevidován.','ok');
-    document.getElementById('jobNumber').value='';document.getElementById('jobGrams').value='';document.getElementById('jobPrice').value='';document.getElementById('jobNote').value='';
-    await loadJobGoldOptions();await loadMine();await loadMyInternalJobs();
+    showStatus('createJobStatus',r.duplicate?'Tato zakázka už byla uložena.':'Zakázka '+r.job.id+' byla uložena. Výdej materiálu je zaevidován.','ok');
+    document.getElementById('jobNumber').value='';document.getElementById('jobGrams').value='';document.getElementById('jobPrice').value='';document.getElementById('jobNote').value='';document.getElementById('includeJobStones').checked=false;document.getElementById('jobStonesPanel').classList.add('hidden');selectedJobStones=[];renderSelectedJobStones();
+    await loadJobGoldOptions();await loadJobStoneOptions();await loadMine();await loadMyInternalJobs();
   }catch(e){showStatus('createJobStatus','Zakázku se nepodařilo uložit: '+jobErrorText(e),'error')}
   finally{btn.disabled=false;btn.textContent='POTVRDIT VÝDEJ'}
 }
 function renderWorkerJobs(rows,targetId){
   const el=document.getElementById(targetId);
   if(!rows.length){el.innerHTML='<p class="muted">Zatím nemáš žádné zakázky.</p>';return}
-  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Cena práce</th><th>Stav</th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div></td><td>${esc(j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${num(j.grams,3)} g</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span></td></tr>`).join('')+'</tbody></table></div>';
+  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Kameny</th><th>Cena práce</th><th>Stav</th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div></td><td>${esc(j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${num(j.grams,3)} g</td><td>${j.stones&&j.stones.length?esc(j.stones.map(s=>s.code+' × '+s.qty).join(', ')):'—'}</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span></td></tr>`).join('')+'</tbody></table></div>';
 }
 async function loadMyInternalJobs(){
   try{const r=await api('listMyInternalJobs');const rows=r.rows||[];renderWorkerJobs(rows.slice(0,8),'workerRecentJobs');renderWorkerJobs(rows,'myJobsList')}
@@ -122,5 +164,5 @@ async function loadMyInternalJobs(){
 }
 
 function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
-(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadMyInternalJobs()})();
+(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadJobStoneOptions();loadMyInternalJobs()})();
 </script></body></html>
