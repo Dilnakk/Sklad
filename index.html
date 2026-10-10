@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('loggedText').innerHTML =
         `Přihlášen: <strong>${esc(u.name)}</strong><br><span class="muted">${esc(u.role)}</span>`;
       document.getElementById('openApp').onclick = () =>
-        go(u.role === 'ADMIN' ? 'admin.html' : 'worker.html');
+        go(u.role === 'ADMIN' ? 'admin.html' : u.role === 'MANAGER' ? 'manager.html' : 'worker.html');
     }
   } catch (e) {
     clearAuth();
