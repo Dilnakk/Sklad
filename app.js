@@ -38,7 +38,7 @@ function api(action, extra={}){
 
 async function requireAuth(requiredRole){
   if(!deviceToken){go('index.html');return null}
-  try{const a=await api('auth');if(!a||!a.user){clearAuth();go('index.html');return null}if(requiredRole&&a.user.role!==requiredRole){go(a.user.role==='ADMIN'?'admin.html':'worker.html');return null}return a.user}catch(e){clearAuth();go('index.html');return null}
+  try{const a=await api('auth');if(!a||!a.user){clearAuth();go('index.html');return null}if(requiredRole&&a.user.role!==requiredRole){go(a.user.role==='ADMIN'?'admin.html':a.user.role==='MANAGER'?'manager.html':'worker.html');return null}return a.user}catch(e){clearAuth();go('index.html');return null}
 }
 
 function showStatus(id,msg,type='info'){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className='status '+type}
