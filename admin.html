@@ -8,6 +8,7 @@
 <div class="grid grid-2"><div class="card"><h2>Nová položka</h2><div class="form-grid"><div><label>Kategorie</label><select id="newCategory"><option>KÁMEN</option><option>KOV</option><option>MATERIÁL</option></select></div><div><label>Druh</label><input id="newType" value="Diamant"></div><div id="stoneSizeField"><label>Velikost</label><input id="newSize" value="1,0 mm"></div><div id="stoneColorField"><label>Barva</label><input id="newColor" value="H"></div><div id="stoneClarityField"><label>Čistota</label><input id="newClarity" value="SI1"></div><div id="metalFinenessField" class="hidden"><label>Ryzost / 1000 <span class="muted">(např. 585)</span></label><input id="newFineness" inputmode="decimal" placeholder="585"></div><div id="metalColorField" class="hidden"><label>Barva kovu</label><select id="newMetalColor"><option>Žluté</option><option>Bílé</option><option>Růžové</option></select></div><div id="metalFormField" class="hidden"><label>Forma</label><input id="newForm" placeholder="drát / plech / granulát / kus…"></div><div id="stoneUnitField"><label>Jednotka</label><input id="newUnit" value="ks" readonly></div><div id="metalUnitField" class="hidden"><label>Jednotka</label><input value="g" readonly></div><div><label>Pozice</label><input id="newPosition" placeholder="Box A1"></div><div><label>Poznámka</label><input id="newNote"></div></div><div id="newCategoryHint" class="muted" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">Položka je definice materiálu. Množství se k ní přidává přes „Příjem materiálu“; stejné vlastnosti nevytvoří novou položku.</div><div class="actions"><button class="good" onclick="createItem()">➕ Vytvořit položku</button></div><div id="createItemStatus"></div></div>
 <div class="card"><h2>Příjem materiálu</h2><div class="form-grid"><div><label>Kód položky</label><input id="receiveCode" onblur="showReceiveMode()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('receiveCode').value=v;showReceiveMode()})">📷 Skenovat QR</button></div><div><label>Množství <span id="receiveQtyHint" class="muted">(ks / g podle položky)</span></label><input id="receiveQty" inputmode="decimal" placeholder="např. 50"></div><div id="receiveCtField"><label>Celkem ct (jen kameny)</label><input id="receiveCt" inputmode="decimal" placeholder="např. 0,250"></div><div><label>Poznámka</label><input id="receiveNote"></div></div><div id="receiveItemInfo"></div><div id="receiveModeHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="receiveItem()">📥 Přijmout</button></div><div id="receiveStatus"></div></div></div>
 <div class="card"><h2>Výdej ze skladu</h2><p class="muted">Přímý výdej z centrálního skladu. Zlatníkovi se materiál připíše do osobního skladu, firmě do evidence „U firem“.</p><div class="form-grid"><div><label>Příjemce</label><select id="issueRecipient"><option value="">Načítám příjemce…</option></select></div><div><label>Kód položky</label><input id="issueCode" placeholder="D-0001 / AU-0001" onblur="showIssueItem()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('issueCode').value=v;showIssueItem()})">📷 Skenovat QR</button></div><div><label>Množství <span id="issueQtyHint" class="muted">(ks / g podle položky)</span></label><input id="issueQty" inputmode="decimal" placeholder="např. 5"></div><div><label>Číslo zakázky <span class="muted">(volitelné)</span></label><input id="issueJobNumber" placeholder="např. 12345"></div><div><label>Poznámka <span class="muted">(volitelné)</span></label><input id="issueNote"></div></div><div id="issueItemInfo"></div><div class="actions"><button class="primary" onclick="issueStock()">📤 Vydat ze skladu</button></div><div id="issueStatus"></div></div>
+<div class="card"><h2>Převzít materiál od zlatníka</h2><p class="muted">Pro fyzicky převzaté odstřižky nebo jiný kov. Zlatníkovi se množství odečte z osobního stavu a stejné množství se připíše do zvolené položky centrálního skladu. Ryzost se nesmí změnit.</p><div class="form-grid"><div><label>Zlatník</label><select id="reclassWorker" onchange="renderReclassSources()"><option value="">Načítám…</option></select></div><div><label>Co přebírám od zlatníka</label><select id="reclassSource" onchange="renderReclassTargets()"><option value="">Nejdřív vyber zlatníka</option></select></div><div><label>Převést v centrálním skladu na</label><select id="reclassTarget" onchange="renderReclassHint()"><option value="">Nejdřív vyber zdrojovou položku</option></select></div><div><label>Skutečně převzaté množství (g)</label><input id="reclassQty" inputmode="decimal" placeholder="např. 12,3"></div><div><label>Poznámka <span class="muted">(volitelné)</span></label><input id="reclassNote" placeholder="např. odstřižky po výrobě"></div></div><div id="reclassHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="good" onclick="reclassifyPersonal()">↪️ Převzít a převést</button></div><div id="reclassStatus"></div></div>
 <div class="card"><h2>Úprava centrálního stavu</h2><p class="muted">Používej jen pro opravu inventury. Operace se vždy zapíše do historie.</p><div class="form-grid"><div><label>Kód</label><input id="adjustCode" onblur="loadAdjustBatches()"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('adjustCode').value=v;loadAdjustBatches()})">📷 Skenovat QR</button></div><div id="adjustBatchField" class="hidden"><label>Šarže pro korekci</label><select id="adjustBatch"><option value="">Vyber šarži</option></select></div><div><label>Změna množství (+ / −)</label><input id="adjustQty" inputmode="decimal"></div><div id="adjustCtField"><label>Změna ct (+ / −, jen kameny)</label><input id="adjustCt" inputmode="decimal"></div><div><label>Důvod</label><input id="adjustNote"></div></div><div id="adjustHint" class="muted" style="margin-top:10px"></div><div class="actions"><button class="danger" onclick="adjustItem()">⚠️ Zapsat korekci</button></div><div id="adjustStatus"></div></div>
 <div class="card"><details><summary style="cursor:pointer;font-weight:750;font-size:1.05rem">📦 Centrální sklad – seznam</summary><div class="actions" style="margin-top:12px"><button class="secondary" onclick="loadCentral()">Obnovit seznam</button></div><div id="centralList" style="margin-top:10px">Načítám…</div></details></div>
 </section>
@@ -62,7 +63,7 @@
 <section id="tab-registration" class="section"><div class="grid grid-2"><div class="card"><h2>Nová registrace zařízení</h2><p class="muted">Nejdřív vyber uživatele. Role se kontroluje proti roli uložené na uživateli.</p><div class="form-grid"><div><label>Uživatel</label><select id="regUser"></select></div><div><label>Role</label><select id="regRole"><option value="WORKER">WORKER</option><option value="MANAGER">MANAGER</option><option value="ADMIN">ADMIN</option></select></div></div><div class="actions"><button class="primary" onclick="makeRegistration()">🔐 Vygenerovat kód</button></div><div id="registrationStatus"></div></div><div class="card"><h2>Poslední kód</h2><div id="registrationCodeBox" class="center muted">Zatím nebyl vygenerován.</div></div></div></section>
 </main>
 <script>
-let me=null, users=[], companies=[];
+let me=null, users=[], companies=[], personalRows=[], centralRows=[];
 function itemText(i){
   const p=[];
   if(i.druh)p.push(i.druh);
@@ -245,6 +246,79 @@ async function issueStock(){
   }catch(e){showStatus('issueStatus','Chyba: '+internalJobErrorText(e),'error')}
 }
 
+
+function sameReclassFineness(a,b){
+  const af=(a&&a.ryzost!==null&&a.ryzost!==undefined&&a.ryzost!=='')?Number(a.ryzost):null;
+  const bf=(b&&b.ryzost!==null&&b.ryzost!==undefined&&b.ryzost!=='')?Number(b.ryzost):null;
+  if((af===null)!==(bf===null))return false;
+  return af===null||Math.abs(af-bf)<1e-9;
+}
+async function loadReclassData(){
+  try{
+    const [p,c]=await Promise.all([api('listPersonal'),api('listCentral')]);
+    personalRows=(p.rows||[]).filter(x=>x.kategorie!=='KÁMEN'&&x.jednotka==='g'&&Number(x.pocet)>1e-9);
+    centralRows=(c.rows||[]).filter(x=>x.kategorie!=='KÁMEN'&&x.jednotka==='g');
+    const workerSelect=document.getElementById('reclassWorker');
+    if(!workerSelect)return;
+    const prev=workerSelect.value;
+    const byId=new Map();
+    personalRows.forEach(x=>{if(!byId.has(x.userId))byId.set(x.userId,x.name)});
+    workerSelect.innerHTML='<option value="">Vyber zlatníka…</option>'+Array.from(byId.entries()).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');
+    if(prev&&byId.has(prev))workerSelect.value=prev;
+    renderReclassSources();
+  }catch(e){
+    if(document.getElementById('reclassStatus'))showStatus('reclassStatus','Chyba načtení: '+internalJobErrorText(e),'error');
+  }
+}
+function renderReclassSources(){
+  const userId=val('reclassWorker');
+  const s=document.getElementById('reclassSource');
+  const previous=s.value;
+  const rows=personalRows.filter(x=>x.userId===userId&&Number(x.pocet)>1e-9);
+  s.innerHTML='<option value="">Vyber materiál…</option>'+rows.map(x=>`<option value="${esc(x.kod)}">${esc(x.kod)} · ${esc(itemText(x))} · u zlatníka ${num(x.pocet)} g</option>`).join('');
+  if(previous&&rows.some(x=>x.kod===previous))s.value=previous;
+  renderReclassTargets();
+}
+function renderReclassTargets(){
+  const sourceCode=val('reclassSource');
+  const source=personalRows.find(x=>x.kod===sourceCode&&x.userId===val('reclassWorker'));
+  const s=document.getElementById('reclassTarget');
+  const previous=s.value;
+  if(!source){
+    s.innerHTML='<option value="">Nejdřív vyber zdrojovou položku</option>';
+    renderReclassHint();
+    return;
+  }
+  const targets=centralRows.filter(x=>x.kategorie!=='KÁMEN'&&x.jednotka==='g'&&sameReclassFineness(source,x));
+  s.innerHTML='<option value="">Vyber cílovou položku…</option>'+targets.map(x=>`<option value="${esc(x.kod)}">${esc(x.kod)} · ${esc(itemText(x))} · centrálně ${num(x.pocet)} g</option>`).join('');
+  if(previous&&targets.some(x=>x.kod===previous))s.value=previous;
+  renderReclassHint();
+}
+function renderReclassHint(){
+  const source=personalRows.find(x=>x.userId===val('reclassWorker')&&x.kod===val('reclassSource'));
+  const target=centralRows.find(x=>x.kod===val('reclassTarget'));
+  const h=document.getElementById('reclassHint');
+  if(!source){h.textContent='Vyber zlatníka a materiál, který jsi od něj fyzicky převzal.';return}
+  let txt='U zlatníka je '+num(source.pocet)+' g.';
+  if(source.ryzost!==null&&source.ryzost!==undefined)txt+=' Ryzost '+num(source.ryzost,0)+'/1000.';
+  if(target)txt+=' Cílová položka má v centrálním skladu '+num(target.pocet)+' g.';
+  h.textContent=txt;
+}
+async function reclassifyPersonal(){
+  try{
+    const qty=Number(val('reclassQty').replace(',','.'));
+    if(!Number.isFinite(qty)||qty<=0)throw new Error('INVALID_QUANTITY');
+    const userId=val('reclassWorker'),sourceCode=val('reclassSource'),targetCode=val('reclassTarget');
+    if(!userId||!sourceCode||!targetCode)throw new Error('MISSING_FIELDS');
+    const r=await api('reclassifyPersonal',{userId,sourceCode,targetCode,qty,note:val('reclassNote')});
+    showStatus('reclassStatus','Převod zapsán. '+r.workerName+': '+num(r.personalAfter)+' g na '+r.sourceCode+'. Centrální '+r.targetCode+': '+num(r.centralAfter)+' g. Šarže '+r.batchId+'.','ok');
+    document.getElementById('reclassQty').value='';
+    document.getElementById('reclassNote').value='';
+    await loadReclassData();
+    loadCentral();loadWorkers();loadOverview();
+  }catch(e){showStatus('reclassStatus','Chyba: '+internalJobErrorText(e),'error')}
+}
+
 async function receiveItem(){
   try{
     const r=await api('receive',{code:val('receiveCode'),qty:n('receiveQty'),totalCt:document.getElementById('receiveCtField').classList.contains('hidden')?null:nOrNull('receiveCt'),note:val('receiveNote')});
@@ -262,6 +336,8 @@ async function adjustItem(){
 async function loadCentral(){
   try{
     const r=await api('listCentral');
+    centralRows=r.rows||[];
+    if(document.getElementById('reclassTarget'))renderReclassTargets();
     const rows=r.rows.map(i=>`<tr><td><strong>${esc(i.kod)}</strong></td><td>${esc(i.kategorie)}</td><td>${esc(itemText(i))}</td><td>${i.kategorie==='KÁMEN'?num(i.pocet)+' '+esc(i.jednotka)+(Number(i.celkemCt)>0?' · '+num(i.celkemCt)+' ct':''):num(i.pocet)+' g'}</td><td>${esc(i.pozice||'—')}</td><td><button class="small secondary" onclick="window.open('print-label.html?code=${encodeURIComponent(i.kod)}','_blank')">Štítek</button></td></tr>`).join('');
     document.getElementById('centralList').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Kategorie</th><th>Položka</th><th>Stav</th><th>Pozice</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }catch(e){document.getElementById('centralList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
@@ -284,6 +360,7 @@ function summaryTable(r){
 async function loadWorkers(){
   try{
     const r=await api('listPersonal');
+    personalRows=r.rows||[];
     const rows=r.rows.map(x=>`<tr><td>${esc(x.name)}</td><td><strong>${esc(x.kod)}</strong></td><td>${esc(itemText(x))}</td><td>${num(x.pocet)} ${esc(x.jednotka)}${Number(x.celkemCt)>0?' · '+num(x.celkemCt)+' ct':''}</td></tr>`).join('');
     document.getElementById('workersList').innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Uživatel</th><th>Kód</th><th>Položka</th><th>Stav</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }catch(e){document.getElementById('workersList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
@@ -361,7 +438,7 @@ let currentInternalJob=null;
 function currentMonthValue(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function internalJobErrorText(e){
   const m=String(e&&e.message||e);
-  const map={INSUFFICIENT_PERSONAL_STOCK:'Zlatník nemá na osobním skladu dostatek zlata pro tuto gramáž.',INSUFFICIENT_STOCK:'V centrálním skladu není dostatek materiálu.',BATCH_STOCK_MISMATCH:'Součet dostupných šarží neodpovídá centrálnímu stavu. Výdej nebyl proveden.',USER_NOT_FOUND:'Vybraný zlatník nebyl nalezen.',USER_INACTIVE:'Vybraný zlatník není aktivní.',COMPANY_NOT_FOUND:'Vybraná firma nebyla nalezena.',COMPANY_INACTIVE:'Vybraná firma není aktivní.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka nebyla nalezena.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',JOB_NOT_FOUND:'Zakázka už neexistuje.'};
+  const map={INSUFFICIENT_PERSONAL_STOCK:'Zlatník nemá na osobním skladu dostatek zlata pro tuto gramáž.',INSUFFICIENT_STOCK:'V centrálním skladu není dostatek materiálu.',BATCH_STOCK_MISMATCH:'Součet dostupných šarží neodpovídá centrálnímu stavu. Výdej nebyl proveden.',USER_NOT_FOUND:'Vybraný zlatník nebyl nalezen.',USER_INACTIVE:'Vybraný zlatník není aktivní.',COMPANY_NOT_FOUND:'Vybraná firma nebyla nalezena.',COMPANY_INACTIVE:'Vybraná firma není aktivní.',MISSING_FIELDS:'Doplň povinné údaje.',INVALID_FINENESS:'Vybraná položka není zlato se známou ryzostí.',ITEM_NOT_FOUND:'Vybraná položka nebyla nalezena.',ITEM_INACTIVE:'Vybraná položka je neaktivní.',INVALID_QUANTITY:'Zadané množství není platné.',UNIT_MISMATCH:'Zdrojová a cílová položka nemají stejnou jednotku.',FINENESS_MISMATCH:'Ryzost zdrojové a cílové položky se neshoduje. Převod nebyl proveden.',TRANSFER_STONES_NOT_SUPPORTED:'Tato funkce je zatím určena jen pro kov a materiál v gramech, ne pro kameny.',JOB_NOT_FOUND:'Zakázka už neexistuje.'};
   return map[m]||m;
 }
 function jobStatusBadge(status){const good=status==='SCHVÁLENA';const warning=status==='UPRAVENO'||status==='ČEKÁ NA DOPLNĚNÍ';return `<span class="badge ${good?'good':warning?'bad':''}">${esc(status||'KE KONTROLE')}</span>`}
@@ -454,12 +531,12 @@ function printInternalJobReport(){
   w.document.close();
 }
 
-function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central')loadCentral();if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='jobs')initInternalJobs();if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
+function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central'){loadCentral();loadReclassData();}if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='jobs')initInternalJobs();if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
 document.getElementById('regUser').addEventListener('change',syncRegRole);
 ['jobWorkerFilter','jobMonthFilter','jobStatusFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',()=>{visitedInternalJobIds.clear();syncVisitedJobs();loadInternalJobs()})});
 ['reportMonth','reportWorkerFilter','reportIncludePending'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',loadInternalJobReport)});
 document.getElementById('newCategory').addEventListener('change',syncNewCategory);
 syncNewCategory();
 
-(async()=>{me=await requireAuth('ADMIN');if(!me)return;document.getElementById('who').textContent=me.name+' · ADMIN';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadOverview();loadCentral();loadUsers();loadCompanies()})();
+(async()=>{me=await requireAuth('ADMIN');if(!me)return;document.getElementById('who').textContent=me.name+' · ADMIN';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadOverview();loadCentral();loadUsers();loadCompanies();loadReclassData()})();
 </script></body></html>
