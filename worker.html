@@ -52,11 +52,9 @@ function itemText(item){
 
 function renderItem(r){
   if(!r||!r.item)return '<div class="error-box">Položka nebyla nalezena.</div>';
-  const i=r.item,metal=i.kategorie!=='KÁMEN',mine=r.mine||{pocet:0,jednotka:i.jednotka,celkemCt:0};
-  const extra=metal?`<div class="grid grid-2" style="margin-top:12px"><div><div class="muted">Čisté Au</div><div class="qty">${i.cisteAuG===null?'—':num(i.cisteAuG,3)+' g'}</div></div><div><div class="muted">14k ekvivalent</div><div class="qty">${i.ekv14kG===null?'—':num(i.ekv14kG,3)+' g'}</div></div></div>`:'';
-  const centralCt=Number(i.celkemCt)>0?`<div class="muted">${num(i.celkemCt)} ct</div>`:'';
+  const i=r.item,mine=r.mine||{pocet:0,jednotka:i.jednotka,celkemCt:0};
   const mineCt=Number(mine.celkemCt)>0?`<div class="muted">${num(mine.celkemCt)} ct</div>`:'';
-  return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · pozice ${esc(i.pozice||'—')}</div>${metal&&i.ryzost===null?'<div class="muted" style="margin-top:8px">Ryzost zatím není určena.</div>':''}${extra}<div class="grid grid-2" style="margin-top:12px"><div><div class="muted">Centrální sklad</div><div class="qty">${num(i.pocet)} ${esc(i.jednotka)}</div>${centralCt}</div><div><div class="muted">U mě</div><div class="qty">${num(mine.pocet||0)} ${esc(i.jednotka)}</div>${mineCt}</div></div><div class="actions"><button class="good" onclick="moveStock('TAKE','${esc(i.kod)}')">VZÍT ZE SKLADU</button><button class="secondary" onclick="moveStock('RETURN','${esc(i.kod)}')">VRÁTIT DO SKLADU</button></div><div id="moveBox"></div></div>`
+  return `<div class="item-card"><div class="item-code">${esc(i.kod)}</div><div class="item-meta">${esc(itemText(i))} · pozice ${esc(i.pozice||'—')}</div><div style="margin-top:12px"><div class="muted">U mě</div><div class="qty">${num(mine.pocet||0)} ${esc(i.jednotka)}</div>${mineCt}</div><div class="actions"><button class="good" onclick="moveStock('TAKE','${esc(i.kod)}')">VZÍT ZE SKLADU</button></div><div id="moveBox"></div></div>`
 }
 
 async function searchItem(){const code=document.getElementById('searchCode').value.trim();if(!code){showStatus('searchStatus','Zadej nebo naskenuj kód.','error');return}showStatus('searchStatus','Hledám…');try{const r=await api('searchItem',{code});document.getElementById('searchResult').innerHTML=renderItem(r);showStatus('searchStatus','Položka nalezena.','ok')}catch(e){document.getElementById('searchResult').innerHTML='';showStatus('searchStatus','Chyba: '+e.message,'error')}}
