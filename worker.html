@@ -30,8 +30,33 @@
   <section id="tab-search" class="section">
     <div class="card"><h2>Najít položku</h2><div class="form-grid"><div><label>Kód položky</label><input id="searchCode" placeholder="D-0001 / AU-0001"></div><div style="display:flex;align-items:end"><button class="secondary" style="width:100%" onclick="openScanner(v=>{document.getElementById('searchCode').value=v;searchItem()})">📷 Skenovat QR</button></div></div><div class="actions"><button class="primary" onclick="searchItem()">🔎 Vyhledat</button></div><div id="searchStatus"></div><div id="searchResult"></div></div>
   </section>
-  <section id="tab-mine" class="section"><div class="card"><h2>Můj stav</h2><div id="mineResult">Načítám…</div></div></section>
-  <section id="tab-myjobs" class="section"><div class="card"><h2>Moje zakázky</h2><p class="muted">Přehled zakázek, které jsi zapsal. Čísla zakázek se mohou v různých obdobích opakovat; interní ID zůstává jedinečné.</p><div id="myJobsList">Načítám…</div></div></section>
+  <section id="tab-mine" class="section">
+    <div class="card"><h2>Můj stav</h2><div id="mineResult">Načítám…</div></div>
+    <div class="card worker-movement-card">
+      <div class="worker-section-heading"><div><h2>Poslední pohyby materiálu</h2><p class="muted">U každého pohybu vidíš stav před změnou, samotnou změnu a výsledný stav.</p></div></div>
+      <div id="myMovementList"><p class="muted">Načítám…</p></div>
+      <details id="workerMovementHistory" class="worker-collapsible-history">
+        <summary>Celá historie pohybů <span id="movementHistoryCount" class="worker-count-badge">0</span></summary>
+        <div id="myMovementHistory" class="worker-history-body"></div>
+      </details>
+    </div>
+  </section>
+  <section id="tab-myjobs" class="section">
+    <div class="card">
+      <h2>Moje zakázky</h2>
+      <p class="muted">Najdi i starší zakázku podle jejího čísla. Vyhledávání prochází celou tvoji historii.</p>
+      <div class="worker-job-search-row"><input id="myJobSearch" inputmode="numeric" placeholder="Číslo zakázky, např. 1258" onkeydown="if(event.key==='Enter')searchMyJobs()"><button class="secondary" onclick="searchMyJobs()">🔎 Vyhledat</button><button class="secondary worker-search-clear" onclick="clearMyJobSearch()">Zrušit</button></div>
+      <div id="myJobSearchStatus" class="worker-search-status"></div>
+      <div id="myJobSearchResults"></div>
+    </div>
+    <div class="card"><h2>Posledních 10 zakázek</h2><div id="myJobsRecentList">Načítám…</div></div>
+    <div class="card worker-history-card">
+      <details id="workerJobHistory" class="worker-collapsible-history">
+        <summary>Celá historie zakázek <span id="jobHistoryCount" class="worker-count-badge">0</span></summary>
+        <div id="myJobsList" class="worker-history-body">Načítám…</div>
+      </details>
+    </div>
+  </section>
 </main>
 <script>
 let me=null;
@@ -59,9 +84,37 @@ function renderItem(r){
 
 async function searchItem(){const code=document.getElementById('searchCode').value.trim();if(!code){showStatus('searchStatus','Zadej nebo naskenuj kód.','error');return}showStatus('searchStatus','Hledám…');try{const r=await api('searchItem',{code});document.getElementById('searchResult').innerHTML=renderItem(r);showStatus('searchStatus','Položka nalezena.','ok')}catch(e){document.getElementById('searchResult').innerHTML='';showStatus('searchStatus','Chyba: '+e.message,'error')}}
 async function moveStock(direction,code){const qty=prompt(direction==='TAKE'?'Kolik vzít?':'Kolik vrátit?','1');if(qty===null)return;const n=Number(qty.replace(',','.'));if(!Number.isFinite(n)||n<=0){alert('Neplatné množství.');return}try{const r=await api('movePersonal',{code,qty:n,direction});document.getElementById('searchResult').innerHTML=renderItem(r);await loadMine();}catch(e){alert('Pohyb se nepodařil: '+e.message)}}
-async function loadMine(){try{const r=await api('myStock');if(!r.rows.length){document.getElementById('mineResult').innerHTML='<p class="muted">Nemáš u sebe žádný materiál.</p>';return}document.getElementById('mineResult').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Položka</th><th>Stav</th><th></th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td><strong>${esc(x.kod)}</strong></td><td>${esc(itemText(x))}</td><td>${num(x.pocet)} ${esc(x.jednotka)}${Number(x.celkemCt)>0?' · '+num(x.celkemCt)+' ct':''}</td><td><button class="small secondary" onclick="document.getElementById('searchCode').value='${esc(x.kod)}';document.querySelector('[data-tab=search]').click();searchItem()">Otevřít</button></td></tr>`).join('')+'</tbody></table></div>'}catch(e){document.getElementById('mineResult').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}}
+let workerMovementsCache=[];
+async function loadMine(){
+  await Promise.all([loadMineStock(),loadMyMovements()]);
+}
+async function loadMineStock(){
+  try{
+    const r=await api('myStock');
+    if(!r.rows.length){document.getElementById('mineResult').innerHTML='<p class="muted">Nemáš u sebe žádný materiál.</p>';return}
+    document.getElementById('mineResult').innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Kód</th><th>Položka</th><th>Stav</th><th></th></tr></thead><tbody>'+r.rows.map(x=>`<tr><td><strong>${esc(x.kod)}</strong></td><td>${esc(itemText(x))}</td><td>${num(x.pocet)} ${esc(x.jednotka)}${Number(x.celkemCt)>0?' · '+num(x.celkemCt)+' ct':''}</td><td><button class="small secondary" onclick="document.getElementById('searchCode').value='${esc(x.kod)}';document.querySelector('[data-tab=search]').click();searchItem()">Otevřít</button></td></tr>`).join('')+'</tbody></table></div>';
+  }catch(e){document.getElementById('mineResult').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}
+function movementValue(v,unit){return v===null||v===undefined?'—':`${num(v,unit==='ks'?0:3)} ${esc(unit||'')}`}
+function movementChange(v,unit){if(v===null||v===undefined)return '—';const n=Number(v);const sign=n>0?'+':'';return `<strong class="${n>0?'movement-plus':n<0?'movement-minus':''}">${sign}${num(n,unit==='ks'?0:3)} ${esc(unit||'')}</strong>`}
+function movementOperationText(op){const map={ZLATO_NA_ZAKAZKU:'Výdej na zakázku',VRATKA_ZAKAZKOVEHO_ZLATA:'Vrácení ze zakázky','KÁMEN_NA_ZAKÁZKU':'Kameny na zakázku',VYDEJ_ZLATNIKOVI:'Příjem ze skladu',VYDEJ_ZE_SKLADU:'Příjem ze skladu',PREVZETI_OD_ZLATNIKA:'Předání do skladu'};return map[op]||String(op||'Pohyb').replaceAll('_',' ')}
+function renderWorkerMovements(rows,targetId,emptyText){
+  const el=document.getElementById(targetId);if(!el)return;
+  if(!rows.length){el.innerHTML=`<p class="muted">${esc(emptyText||'Žádné pohyby.')}</p>`;return}
+  el.innerHTML='<div class="table-wrap"><table class="table worker-movement-table"><thead><tr><th>Datum</th><th>Zakázka</th><th>Materiál</th><th>Před</th><th>Změna</th><th>Po</th></tr></thead><tbody>'+rows.map(m=>`<tr><td>${esc(m.date||'')}</td><td><strong>${esc(m.jobNumber||'—')}</strong><div class="muted worker-move-kind">${esc(movementOperationText(m.operation))}</div></td><td><strong>${esc(m.code||'—')}</strong></td><td>${movementValue(m.personalBefore,m.unit)}</td><td>${movementChange(m.change,m.unit)}</td><td><strong>${movementValue(m.personalAfter,m.unit)}</strong></td></tr>`).join('')+'</tbody></table></div>';
+}
+async function loadMyMovements(){
+  try{
+    const r=await api('myMovements',{limit:500});workerMovementsCache=r.rows||[];
+    renderWorkerMovements(workerMovementsCache.slice(0,10),'myMovementList','Zatím nemáš žádný zaznamenaný pohyb materiálu.');
+    const older=workerMovementsCache.slice(10);document.getElementById('movementHistoryCount').textContent=workerMovementsCache.length;
+    renderWorkerMovements(older,'myMovementHistory','Žádné starší pohyby.');
+    document.getElementById('workerMovementHistory').classList.toggle('hidden',older.length===0);
+  }catch(e){document.getElementById('myMovementList').innerHTML=`<div class="error-box">${esc(jobErrorText(e))}</div>`}
+}
 
 let workerGoldOptions=[];
+let workerJobsCache=[];
 let internalSubmissionKey=makeId();
 let currentJobType='OPRAVA';
 function setJobType(type){
@@ -156,9 +209,29 @@ function renderWorkerJobs(rows,targetId){
   if(!rows.length){el.innerHTML='<p class="muted">Zatím nemáš žádné zakázky.</p>';return}
   el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Kameny</th><th>Cena práce</th><th>Stav</th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div></td><td>${esc(j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${num(j.grams,3)} g</td><td>${j.stones&&j.stones.length?esc(j.stones.map(s=>s.code+' × '+s.qty).join(', ')):'—'}</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span></td></tr>`).join('')+'</tbody></table></div>';
 }
+function normalizeMyJobSearch(v){return String(v||'').trim().toLocaleLowerCase('cs-CZ').replace(/\s+/g,'')}
+function searchMyJobs(){
+  const input=document.getElementById('myJobSearch');const q=normalizeMyJobSearch(input.value);
+  if(!q){document.getElementById('myJobSearchStatus').textContent='Zadej číslo zakázky.';document.getElementById('myJobSearchResults').innerHTML='';return}
+  const exact=[],partial=[];
+  workerJobsCache.forEach(j=>{const n=normalizeMyJobSearch(j.jobNumber);if(!n)return;if(n===q)exact.push(j);else if(n.includes(q))partial.push(j)});
+  const rows=exact.concat(partial);
+  document.getElementById('myJobSearchStatus').textContent=rows.length?`Nalezeno: ${rows.length}`:'Tuto zakázku ve své historii nemáš.';
+  if(rows.length)renderWorkerJobs(rows,'myJobSearchResults');else document.getElementById('myJobSearchResults').innerHTML='';
+}
+function clearMyJobSearch(){document.getElementById('myJobSearch').value='';document.getElementById('myJobSearchStatus').textContent='';document.getElementById('myJobSearchResults').innerHTML=''}
 async function loadMyInternalJobs(){
-  try{const r=await api('listMyInternalJobs');const rows=r.rows||[];renderWorkerJobs(rows.slice(0,8),'workerRecentJobs');renderWorkerJobs(rows,'myJobsList')}
-  catch(e){document.getElementById('workerRecentJobs').innerHTML=`<div class="error-box">${esc(e.message)}</div>`;document.getElementById('myJobsList').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+  try{
+    const r=await api('listMyInternalJobs');workerJobsCache=r.rows||[];
+    renderWorkerJobs(workerJobsCache.slice(0,10),'workerRecentJobs');
+    renderWorkerJobs(workerJobsCache.slice(0,10),'myJobsRecentList');
+    renderWorkerJobs(workerJobsCache,'myJobsList');
+    document.getElementById('jobHistoryCount').textContent=workerJobsCache.length;
+    const q=document.getElementById('myJobSearch').value.trim();if(q)searchMyJobs();
+  }catch(e){
+    const msg=`<div class="error-box">${esc(jobErrorText(e))}</div>`;
+    document.getElementById('workerRecentJobs').innerHTML=msg;document.getElementById('myJobsRecentList').innerHTML=msg;document.getElementById('myJobsList').innerHTML=msg;
+  }
 }
 
 function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
