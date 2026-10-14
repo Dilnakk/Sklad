@@ -30,3 +30,14 @@
 .worker-share-toggle{margin-top:12px}.worker-share-panel{margin-top:10px;padding:16px 18px;background:#fffdf8;border:1px solid #d8c5a8;border-radius:16px}.worker-share-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(150px,.7fr);gap:14px}.worker-shared-tag{margin-top:5px;font-size:11px;font-weight:800;color:#6d5538;background:#f1e6d5;border:1px solid #dec9aa;border-radius:999px;display:inline-block;padding:3px 8px}.worker-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px}.worker-modal.hidden{display:none}.worker-modal-backdrop{position:absolute;inset:0;background:rgba(35,26,18,.48);backdrop-filter:blur(2px)}.worker-modal-card{position:relative;width:min(700px,96vw);max-height:90vh;overflow:auto;background:#fffaf2;border:1px solid #d8c4a8;border-radius:20px;padding:24px;box-shadow:0 24px 70px rgba(38,26,14,.28)}.worker-modal-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.worker-modal-head h2{margin:0 0 6px}.worker-modal-close{width:42px;min-height:42px!important;padding:0!important;border-radius:50%!important;background:#eee3d4!important;color:#5b4633!important;border:1px solid #d5c0a5!important;font-size:26px!important}.worker-delta-preview{margin-top:14px;padding:14px 16px;border-radius:13px;background:#eef3e8;border:1px solid #cbd9bd;color:#35522f;font-weight:800}.worker-modal .actions{margin-top:16px}
 @media(max-width:800px){.worker-share-grid{grid-template-columns:1fr}.worker-modal-card{padding:18px}.worker-modal .actions{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.worker-modal .actions{grid-template-columns:1fr}}
+
+/* Hodinová práce */
+.worker-hourly-toggle{margin-top:14px}
+.worker-hourly-panel{margin:0 0 14px;padding:14px 16px;border:1px solid rgba(150,123,78,.24);border-radius:14px;background:rgba(255,252,245,.7)}
+.worker-hourly-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end}
+.worker-hourly-preview{min-height:68px;padding:10px 12px;border-radius:12px;background:rgba(79,61,32,.055);display:flex;flex-direction:column;justify-content:center}
+.worker-hourly-preview span,.worker-hourly-preview small{font-size:.8rem;color:var(--worker-muted,#756d61)}
+.worker-hourly-preview strong{font-size:1.2rem;margin:2px 0}
+.worker-inline-hourly{margin-top:4px}
+.worker-check-label.compact{padding:10px 12px}
+@media(max-width:700px){.worker-hourly-grid{grid-template-columns:1fr}}

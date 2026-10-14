@@ -10,10 +10,12 @@
       <div class="form-grid">
         <div><label id="jobNumberLabel">Číslo zakázky *</label><input id="jobNumber" placeholder="Např. 0123"></div>
         <div><label>Ryzost zlata</label><select id="jobGoldCode"><option value="">Bez výdeje zlata</option></select><p id="jobGoldHint" class="muted field-hint">Vyber zlato pouze tehdy, pokud ho na zakázku vydáváš.</p></div>
-        <div><label>Vydané zlato (g) <span id="jobGramsRequired" class="muted">volitelné</span></label><input id="jobGrams" inputmode="decimal" placeholder="0,00"><p class="muted field-hint">U opravy může zůstat prázdné. U výroby je gramáž povinná.</p></div>
+        <div><label>Vydané zlato (g) <span id="jobGramsRequired" class="muted">volitelné</span></label><input id="jobGrams" inputmode="decimal" placeholder="0,00" oninput="syncHandoffWeightFromGrams()"><p class="muted field-hint">U opravy může zůstat prázdné. U výroby je gramáž povinná.</p></div>
         <div><label>Cena práce (Kč) <span class="muted">nepovinné</span></label><input id="jobPrice" inputmode="decimal" placeholder="Doplní se později"></div>
         <div class="span-all"><label>Poznámka <span class="muted">nepovinná</span></label><textarea id="jobNote" rows="2" placeholder="Např. leštění, rovnání, výroba pro sklad…"></textarea></div>
       </div>
+      <div class="worker-stone-toggle worker-hourly-toggle"><label class="worker-check-label" for="jobHourly"><input id="jobHourly" type="checkbox" onchange="toggleJobHourly()"><span class="worker-custom-check"></span><span><strong>Účtovat hodinově</strong><small>Zadej jen odpracované hodiny. Cena se vypočítá podle sazby nastavené vedoucím.</small></span></label></div>
+      <div id="jobHourlyPanel" class="worker-hourly-panel hidden"><div class="worker-hourly-grid"><div><label for="jobHours">Odpracováno (hod)</label><input id="jobHours" inputmode="decimal" placeholder="Např. 2,5" oninput="updateJobHourlyPreview()"></div><div class="worker-hourly-preview"><span>Výpočet ceny</span><strong id="jobHourlyPreview">—</strong><small id="jobHourlyRateHint">Načítám hodinovou sazbu…</small></div></div></div>
       <div class="worker-stone-toggle"><label class="worker-check-label" for="includeJobStones"><input id="includeJobStones" type="checkbox" onchange="toggleJobStones()"><span class="worker-custom-check"></span><span><strong>Odevzdávám také kameny</strong><small>Jen pokud na zakázku skutečně vydáváš kameny ze svého osobního skladu.</small></span></label></div>
       <div id="jobStonesPanel" class="worker-stones-panel hidden">
         <div class="worker-stones-heading"><div><h3>Kameny k zakázce</h3><p>Vyber skladovou položku a počet kusů. Zásoba se odečte až po potvrzení zakázky.</p></div><span class="worker-stones-icon">◇</span></div>
@@ -25,7 +27,7 @@
       <div id="jobSharePanel" class="worker-share-panel hidden">
         <div class="worker-share-grid">
           <div><label for="jobShareWorker">Vybrat pracovníka</label><select id="jobShareWorker"><option value="">Načítám pracovníky…</option></select></div>
-          <div><label for="jobHandoffWeight">Hmotnost při předání (g)</label><input id="jobHandoffWeight" inputmode="decimal" placeholder="Např. 3,500"></div>
+          <div><label for="jobHandoffWeight">Hmotnost při předání (g)</label><input id="jobHandoffWeight" inputmode="decimal" placeholder="Např. 3,500" oninput="this.dataset.manual='1'"></div>
         </div>
         <p class="worker-field-hint">Do výběru se zobrazují jen aktivní účty WORKER. Hmotnost při předání se později porovná s hmotností po dokončení navazující práce.</p>
       </div>
@@ -73,6 +75,8 @@
     <div class="form-grid">
       <div><label for="sharedJobFinalWeight">Hmotnost po práci (g) *</label><input id="sharedJobFinalWeight" inputmode="decimal" placeholder="Např. 3,400" oninput="updateSharedJobDeltaPreview()"></div>
       <div><label for="sharedJobPrice">Cena tvé práce (Kč)</label><input id="sharedJobPrice" inputmode="decimal" placeholder="Např. 800"></div>
+      <div class="span-all worker-inline-hourly"><label class="worker-check-label compact" for="sharedJobHourly"><input id="sharedJobHourly" type="checkbox" onchange="toggleSharedJobHourly()"><span class="worker-custom-check"></span><span><strong>Účtovat hodinově</strong><small>Cena se dopočítá automaticky.</small></span></label></div>
+      <div id="sharedJobHourlyPanel" class="span-all worker-hourly-panel hidden"><div class="worker-hourly-grid"><div><label for="sharedJobHours">Odpracováno (hod)</label><input id="sharedJobHours" inputmode="decimal" placeholder="Např. 1,5" oninput="updateSharedHourlyPreview()"></div><div class="worker-hourly-preview"><span>Výpočet ceny</span><strong id="sharedJobHourlyPreview">—</strong><small id="sharedJobHourlyRateHint">Načítám hodinovou sazbu…</small></div></div></div>
       <div class="span-all"><label for="sharedJobNote">Poznámka <span class="muted">nepovinná</span></label><textarea id="sharedJobNote" rows="2" placeholder="Např. rytí monogramu…"></textarea></div>
     </div>
     <div id="sharedJobDeltaPreview" class="worker-delta-preview">Po zadání hmotnosti se ukáže změna tvého skladu.</div>
@@ -202,6 +206,27 @@ function addJobStone(){
 }
 function removeJobStone(code){selectedJobStones=selectedJobStones.filter(x=>x.code!==code);renderSelectedJobStones()}
 
+let workSettingsCache={hourlyRate:0,rewardPercent:30};
+async function loadWorkSettings(){
+  try{const r=await api('workSettings');workSettingsCache={hourlyRate:Number(r.hourlyRate)||0,rewardPercent:Number(r.rewardPercent)||30};updateJobHourlyPreview();updateSharedHourlyPreview();return workSettingsCache}catch(e){workSettingsCache={hourlyRate:0,rewardPercent:30};updateJobHourlyPreview();updateSharedHourlyPreview();return workSettingsCache}
+}
+function moneySimple(v){return new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(Number(v)||0)}
+async function toggleJobHourly(){
+  const on=document.getElementById('jobHourly').checked;document.getElementById('jobHourlyPanel').classList.toggle('hidden',!on);document.getElementById('jobPrice').disabled=on;if(on){document.getElementById('jobPrice').value='';await loadWorkSettings();document.getElementById('jobHours').focus()}updateJobHourlyPreview();
+}
+function updateJobHourlyPreview(){
+  const on=document.getElementById('jobHourly')&&document.getElementById('jobHourly').checked,rate=Number(workSettingsCache.hourlyRate)||0,raw=document.getElementById('jobHours')?document.getElementById('jobHours').value.trim():'',hours=Number(raw.replace(',','.')),preview=document.getElementById('jobHourlyPreview'),hint=document.getElementById('jobHourlyRateHint');if(!preview||!hint)return;
+  hint.textContent=rate>0?`Aktuální sazba ${moneySimple(rate)} / hod.`:'Vedoucí zatím hodinovou sazbu nenastavil.';preview.textContent=on&&Number.isFinite(hours)&&hours>0&&rate>0?moneySimple(hours*rate):'—';
+}
+async function toggleSharedJobHourly(){
+  const on=document.getElementById('sharedJobHourly').checked;document.getElementById('sharedJobHourlyPanel').classList.toggle('hidden',!on);document.getElementById('sharedJobPrice').disabled=on;if(on){document.getElementById('sharedJobPrice').value='';await loadWorkSettings();document.getElementById('sharedJobHours').focus()}updateSharedHourlyPreview();
+}
+function updateSharedHourlyPreview(){
+  const cb=document.getElementById('sharedJobHourly');if(!cb)return;const on=cb.checked,rate=Number(workSettingsCache.hourlyRate)||0,raw=document.getElementById('sharedJobHours').value.trim(),hours=Number(raw.replace(',','.'));document.getElementById('sharedJobHourlyRateHint').textContent=rate>0?`Aktuální sazba ${moneySimple(rate)} / hod.`:'Vedoucí zatím hodinovou sazbu nenastavil.';document.getElementById('sharedJobHourlyPreview').textContent=on&&Number.isFinite(hours)&&hours>0&&rate>0?moneySimple(hours*rate):'—';
+}
+function syncHandoffWeightFromGrams(){
+  const hand=document.getElementById('jobHandoffWeight');if(!hand||hand.dataset.manual==='1')return;const grams=document.getElementById('jobGrams').value.trim();if(document.getElementById('shareJobWorker').checked)hand.value=grams;
+}
 async function loadWorkerRecipients(){
   try{
     const r=await api('workerRecipients');workerRecipientOptions=r.rows||[];
@@ -212,7 +237,7 @@ async function loadWorkerRecipients(){
 function toggleJobShare(){
   const on=document.getElementById('shareJobWorker').checked;
   document.getElementById('jobSharePanel').classList.toggle('hidden',!on);
-  if(on&&workerRecipientOptions.length===0)loadWorkerRecipients();
+  if(on&&workerRecipientOptions.length===0)loadWorkerRecipients();if(on){const h=document.getElementById('jobHandoffWeight');if(!h.value.trim())h.value=document.getElementById('jobGrams').value.trim();}
 }
 
 let currentSharedJob=null;
@@ -220,7 +245,7 @@ function openSharedJobCompletion(id){
   const j=workerJobsCache.find(x=>x.id===id);if(!j)return;currentSharedJob=j;
   document.getElementById('sharedJobTitle').textContent='Dokončit předanou zakázku '+(j.jobNumber||j.id);
   document.getElementById('sharedJobMeta').textContent=`Předal: ${j.handedFrom||'—'} · při převzetí ${num(j.handoffWeight,3)} g · materiál ${j.goldCode||'—'}`;
-  document.getElementById('sharedJobFinalWeight').value='';document.getElementById('sharedJobPrice').value=j.price===null?'':String(j.price).replace('.',',');document.getElementById('sharedJobNote').value='';
+  document.getElementById('sharedJobFinalWeight').value='';document.getElementById('sharedJobPrice').value=j.price===null?'':String(j.price).replace('.',',');document.getElementById('sharedJobPrice').disabled=false;document.getElementById('sharedJobHourly').checked=false;document.getElementById('sharedJobHourlyPanel').classList.add('hidden');document.getElementById('sharedJobHours').value='';document.getElementById('sharedJobNote').value='';
   document.getElementById('sharedJobDeltaPreview').textContent='Po zadání hmotnosti se ukáže změna tvého skladu.';
   document.getElementById('sharedJobModal').classList.remove('hidden');
   document.getElementById('sharedJobFinalWeight').focus();
@@ -233,55 +258,24 @@ function updateSharedJobDeltaPreview(){
   el.textContent=d>0?`Do tvého skladu se připíše ${num(d,3)} g.`:d<0?`Z tvého skladu se odečte ${num(Math.abs(d),3)} g.`:'Stav tvého skladu se nezmění.';
 }
 async function completeSharedJob(){
-  if(!currentSharedJob)return;const raw=document.getElementById('sharedJobFinalWeight').value.trim();const finalWeight=Number(raw.replace(',','.'));const rawPrice=document.getElementById('sharedJobPrice').value.trim();const price=rawPrice===''?'':Number(rawPrice.replace(',','.'));
-  if(!Number.isFinite(finalWeight)||finalWeight<0){showStatus('sharedJobStatus','Zadej platnou hmotnost po práci.','error');return}
-  if(rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('sharedJobStatus','Zadej platnou cenu práce nebo pole nech prázdné.','error');return}
+  if(!currentSharedJob)return;const raw=document.getElementById('sharedJobFinalWeight').value.trim(),finalWeight=Number(raw.replace(',','.')),hourly=document.getElementById('sharedJobHourly').checked,rawHours=document.getElementById('sharedJobHours').value.trim(),hours=rawHours===''?0:Number(rawHours.replace(',','.')),rawPrice=document.getElementById('sharedJobPrice').value.trim(),price=rawPrice===''?'':Number(rawPrice.replace(',','.'));
+  if(!Number.isFinite(finalWeight)||finalWeight<0){showStatus('sharedJobStatus','Zadej platnou hmotnost po práci.','error');return}if(hourly&&(!Number.isFinite(hours)||hours<=0)){showStatus('sharedJobStatus','Zadej platný počet odpracovaných hodin.','error');return}if(!hourly&&rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('sharedJobStatus','Zadej platnou cenu práce nebo pole nech prázdné.','error');return}
   const btn=document.getElementById('sharedJobSave');btn.disabled=true;btn.textContent='UKLÁDÁM…';
-  try{
-    const r=await api('completeSharedInternalJob',{jobId:currentSharedJob.id,finalWeight,price,note:document.getElementById('sharedJobNote').value.trim()});
-    showStatus('sharedJobStatus',`Hotovo. Změna skladu ${r.materialDelta>0?'+':''}${num(r.materialDelta,3)} g.`,'ok');
-    await loadJobGoldOptions();await loadMine();await loadMyInternalJobs();
-    setTimeout(closeSharedJobCompletion,450);
-  }catch(e){showStatus('sharedJobStatus','Dokončení se nepodařilo: '+jobErrorText(e),'error')}finally{btn.disabled=false;btn.textContent='DOKONČIT PRÁCI'}
+  try{const r=await api('completeSharedInternalJob',{jobId:currentSharedJob.id,finalWeight,priceMode:hourly?'HODINOVÁ':'PEVNÁ',hours:hourly?hours:0,price:hourly?'':price,note:document.getElementById('sharedJobNote').value.trim()});showStatus('sharedJobStatus',`Hotovo. Cena práce ${r.job&&r.job.price!==null?moneySimple(r.job.price):'nezadaná'}. Změna skladu ${r.materialDelta>0?'+':''}${num(r.materialDelta,3)} g.`,'ok');await loadJobGoldOptions();await loadMine();await loadMyInternalJobs();setTimeout(closeSharedJobCompletion,450)}catch(e){showStatus('sharedJobStatus','Dokončení se nepodařilo: '+jobErrorText(e),'error')}finally{btn.disabled=false;btn.textContent='DOKONČIT PRÁCI'}
 }
 
+
 async function submitInternalJob(){
-  const btn=document.getElementById('createJobButton');
-  const jobNumber=document.getElementById('jobNumber').value.trim();
-  const rawGrams=document.getElementById('jobGrams').value.trim();
-  const grams=rawGrams===''?0:Number(rawGrams.replace(',','.'));
-  const rawPrice=document.getElementById('jobPrice').value.trim();
-  const price=rawPrice===''?'':Number(rawPrice.replace(',','.'));
-  const goldCode=document.getElementById('jobGoldCode').value;
-  const includeStones=document.getElementById('includeJobStones').checked;
-  const shareWithWorker=document.getElementById('shareJobWorker').checked;
-  const shareWorkerId=document.getElementById('jobShareWorker').value;
-  const rawHandoffWeight=document.getElementById('jobHandoffWeight').value.trim();
-  const handoffWeight=rawHandoffWeight===''?0:Number(rawHandoffWeight.replace(',','.'));
-  if(includeStones&&selectedJobStones.length===0){showStatus('createJobStatus','Zaškrtl jsi odevzdání kamenů, ale žádný kámen jsi nepřidal.','error');return}
-  if(shareWithWorker&&!shareWorkerId){showStatus('createJobStatus','Vyber pracovníka, kterému zakázku předáváš.','error');return}
-  if(shareWithWorker&&!goldCode){showStatus('createJobStatus','Při předání vyber zlato/ryzost, aby systém věděl, do kterého skladu později započítat rozdíl hmotnosti.','error');return}
-  if(shareWithWorker&&(!Number.isFinite(handoffWeight)||handoffWeight<=0)){showStatus('createJobStatus','Zadej skutečnou hmotnost při předání.','error');return}
-  if(currentJobType==='OPRAVA'&&!jobNumber){showStatus('createJobStatus','U opravy je číslo zakázky povinné.','error');return}
-  if(!Number.isFinite(grams)||grams<0){showStatus('createJobStatus','Zadej platnou gramáž.','error');return}
-  if(currentJobType==='VÝROBA'&&grams<=0){showStatus('createJobStatus','U výroby je gramáž povinná a musí být větší než nula.','error');return}
-  if(grams>0&&!goldCode){showStatus('createJobStatus','Pro výdej gramů vyber zlato ze svého osobního skladu.','error');return}
-  if(grams>0){const option=workerGoldOptions.find(o=>o.code===goldCode);if(!option||option.balance<grams-1e-9){showStatus('createJobStatus','Na osobním skladu není dostatek vybraného zlata.','error');return}}
-  if(rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('createJobStatus','Zadej platnou cenu nebo pole nech prázdné.','error');return}
+  const btn=document.getElementById('createJobButton'),jobNumber=document.getElementById('jobNumber').value.trim(),rawGrams=document.getElementById('jobGrams').value.trim(),grams=rawGrams===''?0:Number(rawGrams.replace(',','.')),hourly=document.getElementById('jobHourly').checked,rawHours=document.getElementById('jobHours').value.trim(),hours=rawHours===''?0:Number(rawHours.replace(',','.')),rawPrice=document.getElementById('jobPrice').value.trim(),price=rawPrice===''?'':Number(rawPrice.replace(',','.')),goldCode=document.getElementById('jobGoldCode').value,includeStones=document.getElementById('includeJobStones').checked,shareWithWorker=document.getElementById('shareJobWorker').checked,shareWorkerId=document.getElementById('jobShareWorker').value,rawHandoffWeight=document.getElementById('jobHandoffWeight').value.trim(),handoffWeight=rawHandoffWeight===''?0:Number(rawHandoffWeight.replace(',','.'));
+  if(includeStones&&selectedJobStones.length===0){showStatus('createJobStatus','Zaškrtl jsi odevzdání kamenů, ale žádný kámen jsi nepřidal.','error');return}if(shareWithWorker&&!shareWorkerId){showStatus('createJobStatus','Vyber pracovníka, kterému zakázku předáváš.','error');return}if(shareWithWorker&&!goldCode){showStatus('createJobStatus','Při předání vyber zlato/ryzost, aby systém věděl, do kterého skladu později započítat rozdíl hmotnosti.','error');return}if(shareWithWorker&&(!Number.isFinite(handoffWeight)||handoffWeight<=0)){showStatus('createJobStatus','Zadej skutečnou hmotnost při předání.','error');return}if(currentJobType==='OPRAVA'&&!jobNumber){showStatus('createJobStatus','U opravy je číslo zakázky povinné.','error');return}if(!Number.isFinite(grams)||grams<0){showStatus('createJobStatus','Zadej platnou gramáž.','error');return}if(currentJobType==='VÝROBA'&&grams<=0){showStatus('createJobStatus','U výroby je gramáž povinná a musí být větší než nula.','error');return}if(grams>0&&!goldCode){showStatus('createJobStatus','Pro výdej gramů vyber zlato ze svého osobního skladu.','error');return}if(grams>0){const option=workerGoldOptions.find(o=>o.code===goldCode);if(!option||option.balance<grams-1e-9){showStatus('createJobStatus','Na osobním skladu není dostatek vybraného zlata.','error');return}}if(hourly&&(!Number.isFinite(hours)||hours<=0)){showStatus('createJobStatus','Zadej platný počet odpracovaných hodin.','error');return}if(!hourly&&rawPrice!==''&&(!Number.isFinite(price)||price<0)){showStatus('createJobStatus','Zadej platnou cenu nebo pole nech prázdné.','error');return}
   btn.disabled=true;btn.textContent='UKLÁDÁM…';
-  try{
-    const r=await api('createInternalJob',{submissionKey:internalSubmissionKey,jobType:currentJobType,jobNumber,goldCode:(grams>0||shareWithWorker)?goldCode:'',grams,price,note:document.getElementById('jobNote').value.trim(),stones:includeStones?selectedJobStones:[],shareWithWorker,shareWorkerId,handoffWeight:shareWithWorker?handoffWeight:0});
-    internalSubmissionKey=makeId();
-    showStatus('createJobStatus',r.duplicate?'Tato zakázka už byla uložena.':'Zakázka '+r.job.id+' byla uložena. Výdej materiálu je zaevidován.','ok');
-    document.getElementById('jobNumber').value='';document.getElementById('jobGrams').value='';document.getElementById('jobPrice').value='';document.getElementById('jobNote').value='';document.getElementById('includeJobStones').checked=false;document.getElementById('jobStonesPanel').classList.add('hidden');selectedJobStones=[];renderSelectedJobStones();document.getElementById('shareJobWorker').checked=false;document.getElementById('jobSharePanel').classList.add('hidden');document.getElementById('jobShareWorker').value='';document.getElementById('jobHandoffWeight').value='';
-    await loadJobGoldOptions();await loadJobStoneOptions();await loadMine();await loadMyInternalJobs();
-  }catch(e){showStatus('createJobStatus','Zakázku se nepodařilo uložit: '+jobErrorText(e),'error')}
-  finally{btn.disabled=false;btn.textContent='POTVRDIT VÝDEJ'}
+  try{const r=await api('createInternalJob',{submissionKey:internalSubmissionKey,jobType:currentJobType,jobNumber,goldCode:(grams>0||shareWithWorker)?goldCode:'',grams,priceMode:hourly?'HODINOVÁ':'PEVNÁ',hours:hourly?hours:0,price:hourly?'':price,note:document.getElementById('jobNote').value.trim(),stones:includeStones?selectedJobStones:[],shareWithWorker,shareWorkerId,handoffWeight:shareWithWorker?handoffWeight:0});internalSubmissionKey=makeId();showStatus('createJobStatus',r.duplicate?'Tato zakázka už byla uložena.':'Zakázka '+r.job.id+' byla uložena. Výdej materiálu je zaevidován.'+(r.job.priceMode==='HODINOVÁ'?' Cena '+moneySimple(r.job.price)+' byla vypočtena z hodin.':''),'ok');document.getElementById('jobNumber').value='';document.getElementById('jobGrams').value='';document.getElementById('jobPrice').value='';document.getElementById('jobPrice').disabled=false;document.getElementById('jobHourly').checked=false;document.getElementById('jobHourlyPanel').classList.add('hidden');document.getElementById('jobHours').value='';document.getElementById('jobNote').value='';document.getElementById('includeJobStones').checked=false;document.getElementById('jobStonesPanel').classList.add('hidden');selectedJobStones=[];renderSelectedJobStones();document.getElementById('shareJobWorker').checked=false;document.getElementById('jobSharePanel').classList.add('hidden');document.getElementById('jobShareWorker').value='';document.getElementById('jobHandoffWeight').value='';document.getElementById('jobHandoffWeight').dataset.manual='';await loadJobGoldOptions();await loadJobStoneOptions();await loadMine();await loadMyInternalJobs()}catch(e){showStatus('createJobStatus','Zakázku se nepodařilo uložit: '+jobErrorText(e),'error')}finally{btn.disabled=false;btn.textContent='POTVRDIT VÝDEJ'}
 }
+
 function renderWorkerJobs(rows,targetId){
   const el=document.getElementById(targetId);
   if(!rows.length){el.innerHTML='<p class="muted">Zatím nemáš žádné zakázky.</p>';return}
-  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Kameny</th><th>Cena práce</th><th>Stav</th><th></th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div>${j.linkedJob?`<div class="worker-shared-tag">Předal: ${esc(j.handedFrom||'—')} · ${num(j.handoffWeight,3)} g</div>`:(j.handoffTo?`<div class="worker-shared-tag">Předáno: ${esc(j.handoffTo)}</div>`:'')}</td><td>${esc(j.linkedJob?'NAVAZUJÍCÍ '+j.type:j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${j.linkedJob?(j.completedWeight===null?'—':num(j.completedWeight,3)+' g'):num(j.grams,3)+' g'}</td><td>${j.stones&&j.stones.length?esc(j.stones.map(s=>s.code+' × '+s.qty).join(', ')):'—'}</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span>${j.materialDelta!==null?`<div class="muted worker-move-kind">Materiál ${j.materialDelta>0?'+':''}${num(j.materialDelta,3)} g</div>`:''}</td><td>${j.linkedJob&&j.status==='ČEKÁ NA DOKONČENÍ'?`<button class="small primary" onclick="openSharedJobCompletion('${esc(j.id)}')">Dokončit</button>`:''}</td></tr>`).join('')+'</tbody></table></div>';
+  el.innerHTML='<div class="table-wrap"><table class="table"><thead><tr><th>Datum</th><th>Číslo zakázky</th><th>Typ</th><th>Ryzost</th><th>Gramy</th><th>Kameny</th><th>Cena práce</th><th>Stav</th><th></th></tr></thead><tbody>'+rows.map(j=>`<tr><td>${esc(j.created)}</td><td><strong>${esc(j.jobNumber||'—')}</strong><div class="muted">${esc(j.id)}</div>${j.linkedJob?`<div class="worker-shared-tag">Předal: ${esc(j.handedFrom||'—')} · ${num(j.handoffWeight,3)} g</div>`:(j.handoffTo?`<div class="worker-shared-tag">Předáno: ${esc(j.handoffTo)}</div>`:'')}</td><td>${esc(j.linkedJob?'NAVAZUJÍCÍ '+j.type:j.type)}</td><td>${j.fineness===null?'—':esc(j.fineness+'/1000')}</td><td>${j.linkedJob?(j.completedWeight===null?'—':num(j.completedWeight,3)+' g'):num(j.grams,3)+' g'}</td><td>${j.stones&&j.stones.length?esc(j.stones.map(s=>s.code+' × '+s.qty).join(', ')):'—'}</td><td>${j.price===null?'—':new Intl.NumberFormat('cs-CZ',{style:'currency',currency:'CZK',maximumFractionDigits:2}).format(j.price)}${j.priceMode==='HODINOVÁ'?`<div class="muted worker-move-kind">${num(j.hours,2)} h × ${moneySimple(j.hourlyRate)}</div>`:''}</td><td><span class="badge ${j.status==='SCHVÁLENA'?'good':j.status==='UPRAVENO'?'bad':''}">${esc(j.status)}</span>${j.materialDelta!==null?`<div class="muted worker-move-kind">Materiál ${j.materialDelta>0?'+':''}${num(j.materialDelta,3)} g</div>`:''}</td><td>${j.linkedJob&&j.status==='ČEKÁ NA DOKONČENÍ'?`<button class="small primary" onclick="openSharedJobCompletion('${esc(j.id)}')">Dokončit</button>`:''}</td></tr>`).join('')+'</tbody></table></div>';
 }
 function normalizeMyJobSearch(v){return String(v||'').trim().toLocaleLowerCase('cs-CZ').replace(/\s+/g,'')}
 function searchMyJobs(){
@@ -309,5 +303,5 @@ async function loadMyInternalJobs(){
 }
 
 function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
-(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadJobStoneOptions();loadWorkerRecipients();loadMyInternalJobs()})();
+(async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadJobStoneOptions();loadWorkerRecipients();loadWorkSettings();loadMyInternalJobs()})();
 </script></body></html>
