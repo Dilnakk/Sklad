@@ -33,3 +33,9 @@ body.manager-page{--ink:#202b3c;--muted:#738095;--line:#e5eaf1;--surface:#fff;--
 
 .manager-price-note{display:block;margin-top:3px;color:#6f7785;font-weight:500;font-size:.76rem}
 .manager-settings-status{margin-top:14px}
+
+/* Hodinové sazby podle pracovníka */
+.manager-rate-grid{grid-template-columns:1.1fr 1.1fr .75fr .85fr 1.25fr auto;align-items:end}
+.manager-default-rate{align-self:center}.manager-check-label{display:flex!important;align-items:center;gap:9px;color:#455269!important}.manager-check-label input{width:auto!important;margin:0}.manager-rate-history{margin-top:18px}.manager-rate-history .manager-table{min-width:720px}.manager-closure-state{min-height:44px;border:1px solid #dfe6f0;border-radius:10px;background:#fbfcfe;padding:8px 12px;display:flex;flex-direction:column;justify-content:center}.manager-closure-state strong{font-size:12px;color:#334056}.manager-closure-state small{font-size:10px;color:#7b879b;margin-top:3px}.manager-danger-button{background:#fff!important;color:#a13d3d!important;border-color:#edcaca!important;box-shadow:none!important}
+@media(max-width:1050px){.manager-rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.manager-rate-grid{grid-template-columns:1fr}.manager-rate-history{overflow:auto}}
