@@ -1,4 +1,4 @@
-<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="worker.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body class="worker-page">
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sklad materiálu – pracovník</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="worker.css"><link rel="stylesheet" href="worker-voice.css"><script src="config.js"></script><script src="qr-mini.js"></script><script src="app.js"></script></head><body class="worker-page">
 <header class="worker-header"><div class="worker-header-inner"><div class="worker-brand"><div class="worker-mark">ZK</div><div><div class="worker-kicker">ZLATNICKÁ DÍLNA KONEČNÍ</div><h1>Sklad a zakázky</h1><p id="who">Pracovník</p></div></div><div class="worker-top-actions"><span id="conn" class="worker-connection">Kontrola…</span><button class="worker-logout" onclick="clearAuth();go('index.html')">Odhlásit</button></div></div></header>
 <main class="container worker-main">
   <div class="nav worker-nav"><button class="active" data-tab="job">🛠️ Nová zakázka</button><button data-tab="search">🔎 Hledat</button><button data-tab="mine">📦 Můj stav</button><button data-tab="myjobs">📋 Moje zakázky</button></div>
@@ -68,6 +68,8 @@
     </div>
   </section>
 </main>
+<button id="workerVoiceBtn" type="button" class="worker-voice-btn" title="Nadiktovat zakázku" aria-label="Nadiktovat zakázku">🎙</button>
+<div id="workerVoiceStatus" class="worker-voice-status" aria-live="polite"></div>
 <div id="sharedJobModal" class="worker-modal hidden">
   <div class="worker-modal-backdrop" onclick="closeSharedJobCompletion()"></div>
   <div class="worker-modal-card">
@@ -304,4 +306,4 @@ async function loadMyInternalJobs(){
 
 function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
 (async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadJobStoneOptions();loadWorkerRecipients();loadWorkSettings();loadMyInternalJobs()})();
-</script></body></html>
+</script><script src="worker-voice.js"></script></body></html>

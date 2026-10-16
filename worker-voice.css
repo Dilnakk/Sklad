@@ -1,0 +1,40 @@
+/* WORKER VOICE – volitelná hlasová nadstavba. Neovlivňuje rozložení stránky. */
+.worker-voice-btn{
+  position:fixed;
+  right:14px;
+  top:72px;
+  z-index:10020;
+  width:42px;
+  height:42px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:#222;
+  color:#fff;
+  font-size:20px;
+  line-height:42px;
+  text-align:center;
+  box-shadow:0 3px 12px rgba(0,0,0,.28);
+  cursor:pointer;
+}
+.worker-voice-btn.listening{transform:scale(1.08)}
+.worker-voice-btn:disabled{opacity:.45;cursor:default}
+.worker-voice-status{
+  position:fixed;
+  right:14px;
+  top:122px;
+  z-index:10020;
+  display:none;
+  width:min(310px,calc(100vw - 28px));
+  max-height:45vh;
+  overflow:auto;
+  box-sizing:border-box;
+  padding:9px 11px;
+  border-radius:9px;
+  background:rgba(20,20,20,.94);
+  color:#fff;
+  font-size:12px;
+  line-height:1.4;
+  box-shadow:0 3px 14px rgba(0,0,0,.28);
+}
+.worker-voice-status.show{display:block}
