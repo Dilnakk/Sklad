@@ -1,14 +1,18 @@
 // ============================================================================
-// WORKER VOICE v5
+// WORKER VOICE v6
 //
 // 1× klepnutí = začít diktovat.
 // Žádné druhé klepnutí pro ukončení.
-// Po krátké pauze se diktování samo dokončí.
+//
+// Diktování se ukončí:
+// - po krátké pauze,
+// - slovem: HOTOVO / STOP / KONEC / ZASTAVIT,
+// - nejpozději automaticky po 15 sekundách.
 //
 // Příklady:
-//   "oprava 12-63 3 gramy 600 korun"
-//   "výroba 16-35 5 hodin"
-//   "oprava 1625 6,5 gramů předávám Martině"
+//   "oprava 12-63 3 gramy 600 korun hotovo"
+//   "výroba 16-35 5 hodin konec"
+//   "oprava 1625 6,5 gramů předávám Martině hotovo"
 //
 // Pravidla:
 // - číslo po OPRAVA / VÝROBA bez jednotky = číslo zakázky
@@ -56,10 +60,24 @@
   let restartTimer=null;
   let finishTimer=null;
   let hideTimer=null;
+  let maxRecordingTimer=null;
 
   // Po kolika ms bez další nové řeči
   // se celá zakázka automaticky dokončí.
   const AUTO_FINISH_MS=1800;
+
+  // Maximální délka jedné hlasové relace.
+  // Pojistka proti nekonečnému poslouchání v hlučné dílně.
+  const MAX_RECORDING_MS=15000;
+
+  // Slova, která diktování okamžitě ukončí.
+  const STOP_WORDS=[
+    'hotovo',
+    'stop',
+    'konec',
+    'zastavit'
+  ];
+
 
   // --------------------------------------------------------------------------
   // MIKROFON
@@ -68,7 +86,6 @@
   btn.addEventListener('click',function(){
 
     // Během aktivního diktování druhé klepnutí nic nedělá.
-    // Už se nepoužívá jako STOP.
     if(sessionActive){
       return;
     }
@@ -90,8 +107,22 @@
     btn.disabled=true;
 
     showCompactStatus(
-      '🎙 Poslouchám…',
+      '🎙 Poslouchám… řekni „hotovo“ pro ukončení',
       0
+    );
+
+    // Tvrdá pojistka.
+    maxRecordingTimer=setTimeout(
+      function(){
+
+        maxRecordingTimer=null;
+
+        if(sessionActive){
+          finishVoiceSession();
+        }
+
+      },
+      MAX_RECORDING_MS
     );
 
     safeStartRecognition();
@@ -176,11 +207,45 @@
         ).trim();
     }
 
-    if(bestText.trim()){
+    bestText=bestText.trim();
 
-      currentSegment=
-        bestText.trim();
+    if(!bestText){
+      return;
     }
+
+
+    // ----------------------------------------------------------------------
+    // HLASOVÉ UKONČENÍ
+    //
+    // "hotovo"
+    // "stop"
+    // "konec"
+    // "zastavit"
+    //
+    // Jakmile některé slovo zazní,
+    // poslední část před tímto slovem se uloží
+    // a mikrofon se okamžitě vypne.
+    // ----------------------------------------------------------------------
+
+    if(containsStopWord(bestText)){
+
+      const cleanText=
+        removeStopWord(bestText);
+
+      if(cleanText){
+
+        currentSegment=
+          cleanText;
+      }
+
+      finishVoiceSession();
+
+      return;
+    }
+
+
+    currentSegment=
+      bestText;
   };
 
 
@@ -202,6 +267,8 @@
 
       sessionActive=false;
 
+      clearTimers();
+
       btn.classList.remove('listening');
       btn.disabled=false;
 
@@ -216,6 +283,8 @@
     if(event.error==='audio-capture'){
 
       sessionActive=false;
+
+      clearTimers();
 
       btn.classList.remove('listening');
       btn.disabled=false;
@@ -249,8 +318,6 @@
     }
 
     // Po každé pauze znovu zapneme mikrofon.
-    // Pauza tedy zároveň vytváří přirozený předěl
-    // mezi "zakázka", "gramy", "koruny" atd.
     restartTimer=setTimeout(
       function(){
 
@@ -319,6 +386,18 @@
       restartTimer=null;
     }
 
+    if(finishTimer){
+
+      clearTimeout(finishTimer);
+      finishTimer=null;
+    }
+
+    if(maxRecordingTimer){
+
+      clearTimeout(maxRecordingTimer);
+      maxRecordingTimer=null;
+    }
+
     if(currentSegment.trim()){
 
       addSegment(
@@ -369,6 +448,78 @@
         1800
       );
     }
+  }
+
+
+  // --------------------------------------------------------------------------
+  // HLASOVÉ STOP SLOVO
+  // --------------------------------------------------------------------------
+
+  function containsStopWord(text){
+
+    const t=fold(text);
+
+    return STOP_WORDS.some(
+      function(word){
+
+        return new RegExp(
+          '\\b'+word+'\\b',
+          'i'
+        ).test(t);
+      }
+    );
+  }
+
+
+  function removeStopWord(text){
+
+    const original=
+      String(text||'');
+
+    const folded=
+      fold(original);
+
+    let earliest=-1;
+
+    for(const word of STOP_WORDS){
+
+      const regex=
+        new RegExp(
+          '\\b'+word+'\\b',
+          'i'
+        );
+
+      const match=
+        regex.exec(folded);
+
+      if(
+        match&&
+        (
+          earliest===-1||
+          match.index<earliest
+        )
+      ){
+        earliest=match.index;
+      }
+    }
+
+    if(earliest<0){
+      return original.trim();
+    }
+
+    // fold() u běžné češtiny pouze odstraňuje diakritiku,
+    // délka textu proto zůstává pro tento účel použitelná.
+    return original
+      .slice(
+        0,
+        earliest
+      )
+      .trim()
+      .replace(
+        /[,.;:\s]+$/,
+        ''
+      )
+      .trim();
   }
 
 
@@ -446,26 +597,6 @@
 
     // ----------------------------------------------------------------------
     // ČÍSLO ZAKÁZKY
-    //
-    // ZÁKLADNÍ NOVÉ PRAVIDLO:
-    //
-    // číslo bez jednotky hned po:
-    //
-    //   oprava
-    //   výroba
-    //
-    // je číslo zakázky.
-    //
-    // Např.:
-    //
-    //   oprava 12-63
-    //   výroba 16 35
-    //   výroba 1635 3 gramy 600 korun
-    //
-    // -> 1263 / 1635
-    //
-    // Číslo před "gramy", "korun", "hodin"
-    // se do čísla zakázky NIKDY nepřidá.
     // ----------------------------------------------------------------------
 
     data.jobNumber=
@@ -485,8 +616,7 @@
           'g',
           'gram',
           'gramu',
-          'gramy',
-          'gramu'
+          'gramy'
         ]
       );
 
@@ -624,17 +754,6 @@
         );
 
 
-      // Zastavíme se před prvním údajem,
-      // který už má vlastní význam.
-      //
-      // např.:
-      //
-      // "16-35 3 gramy"
-      //
-      // vezmeme pouze:
-      //
-      // "16-35"
-
       const stop=
         rest.search(
           /\b(?:\d+(?:[.,]\d+)?\s*(?:g|gram|gramu|gramy|kc|korun|koruna|koruny|h|hod|hodina|hodiny|hodin|hodinu)|ryzost|predavam|predam|predat|poznamka)\b/i
@@ -650,8 +769,6 @@
       }
 
 
-      // Například:
-      //
       // 12-63 -> 1263
       // 12 63 -> 1263
       // 1263  -> 1263
@@ -668,8 +785,6 @@
       }
 
 
-      // Slovní číslice:
-      // "jedna dva sest tri"
       const spoken=
         spokenDigits(rest);
 
@@ -713,938 +828,4 @@
 
 
     // RYZOST
-    if(data.fineness!==null){
-
-      selectGoldByFineness(
-        data.fineness
-      );
-    }
-
-
-    // GRAMY
-    if(data.grams!==null){
-
-      setValue(
-        'jobGrams',
-        formatInputNumber(
-          data.grams
-        )
-      );
-    }
-
-
-    // ----------------------------------------------------------------------
-    // HODINOVÁ PRÁCE
-    // ----------------------------------------------------------------------
-
-    if(data.hours!==null){
-
-      setChecked(
-        'jobHourly',
-        true
-      );
-
-      setValue(
-        'jobHours',
-        formatInputNumber(
-          data.hours
-        )
-      );
-
-      // Cena se při hodinové práci
-      // vypočítává podle sazby.
-      const price=
-        document.getElementById(
-          'jobPrice'
-        );
-
-      if(price){
-
-        price.value='';
-        price.disabled=true;
-      }
-
-      const panel=
-        document.getElementById(
-          'jobHourlyPanel'
-        );
-
-      if(panel){
-
-        panel.classList.remove(
-          'hidden'
-        );
-      }
-
-      if(
-        typeof window.loadWorkSettings===
-        'function'
-      ){
-
-        window.loadWorkSettings();
-      }
-
-      if(
-        typeof window.updateJobHourlyPreview===
-        'function'
-      ){
-
-        setTimeout(
-          function(){
-
-            window.updateJobHourlyPreview();
-
-          },
-          50
-        );
-      }
-
-
-    }else if(data.price!==null){
-
-      // Když byly řečeny koruny
-      // a nebyly řečeny hodiny,
-      // jde o pevnou cenu.
-
-      setChecked(
-        'jobHourly',
-        false
-      );
-
-      const panel=
-        document.getElementById(
-          'jobHourlyPanel'
-        );
-
-      if(panel){
-
-        panel.classList.add(
-          'hidden'
-        );
-      }
-
-      const price=
-        document.getElementById(
-          'jobPrice'
-        );
-
-      if(price){
-
-        price.disabled=false;
-      }
-
-      setValue(
-        'jobPrice',
-        formatInputNumber(
-          data.price
-        )
-      );
-    }
-
-
-    // POZNÁMKA
-    if(data.note!==null){
-
-      setValue(
-        'jobNote',
-        data.note
-      );
-    }
-
-
-    // ----------------------------------------------------------------------
-    // PŘEDÁVÁM MARTINĚ
-    // ----------------------------------------------------------------------
-
-    if(data.handoffName!==null){
-
-      data.handoffResolved=
-        enableHandoff(
-          data.handoffName
-        );
-    }
-
-
-    // Pokud jsou současně gramy + předání,
-    // zkopíruje se gramáž i do hmotnosti předání.
-    if(
-      data.grams!==null&&
-      typeof window.syncHandoffWeightFromGrams===
-      'function'
-    ){
-
-      window.syncHandoffWeightFromGrams();
-    }
-  }
-
-
-  function setChecked(
-    id,
-    checked
-  ){
-
-    const el=
-      document.getElementById(id);
-
-    if(!el)return;
-
-    const changed=
-      el.checked!==Boolean(
-        checked
-      );
-
-    el.checked=
-      Boolean(
-        checked
-      );
-
-    if(changed){
-
-      el.dispatchEvent(
-        new Event(
-          'change',
-          {
-            bubbles:true
-          }
-        )
-      );
-    }
-  }
-
-
-  function enableHandoff(spokenName){
-
-    setChecked(
-      'shareJobWorker',
-      true
-    );
-
-    const panel=
-      document.getElementById(
-        'jobSharePanel'
-      );
-
-    if(panel){
-
-      panel.classList.remove(
-        'hidden'
-      );
-    }
-
-    const select=
-      document.getElementById(
-        'jobShareWorker'
-      );
-
-    if(!select){
-      return null;
-    }
-
-    const options=
-      Array.from(
-        select.options||[]
-      ).filter(
-        o=>
-          String(
-            o.value||''
-          ).trim()
-      );
-
-    const target=
-      fold(spokenName)
-      .split(' ')[0];
-
-    const stem=
-      personStem(
-        target
-      );
-
-    let matches=
-      options.filter(
-        o=>{
-
-          const words=
-            fold(
-              o.textContent||
-              ''
-            )
-            .split(/\s+/)
-            .filter(Boolean);
-
-          return words.some(
-            word=>
-              personStem(
-                word
-              )===stem
-          );
-        }
-      );
-
-    if(matches.length!==1){
-
-      return null;
-    }
-
-    select.value=
-      matches[0].value;
-
-    select.dispatchEvent(
-      new Event(
-        'change',
-        {
-          bubbles:true
-        }
-      )
-    );
-
-    return String(
-      matches[0].textContent||
-      spokenName
-    ).trim();
-  }
-
-
-  // --------------------------------------------------------------------------
-  // JEDNOTKY
-  // --------------------------------------------------------------------------
-
-  function findUnitQuantity(
-    text,
-    unitWords
-  ){
-
-    const units=
-      new Set(
-        unitWords.map(
-          fold
-        )
-      );
-
-    const tokens=
-      fold(text)
-      .split(/\s+/)
-      .filter(Boolean);
-
-    for(
-      let i=0;
-      i<tokens.length;
-      i++
-    ){
-
-      const unit=
-        cleanToken(
-          tokens[i]
-        );
-
-      if(!units.has(unit)){
-        continue;
-      }
-
-
-      // 5 gramů
-      // 5,6 gramů
-      if(i>0){
-
-        const previous=
-          cleanToken(
-            tokens[i-1]
-          );
-
-        if(
-          /^\d+(?:[.,]\d+)?$/.test(
-            previous
-          )
-        ){
-
-          const n=
-            parseCzechNumber(
-              previous
-            );
-
-          if(n!==null){
-
-            return n;
-          }
-        }
-      }
-
-
-      // pět gramů
-      // pět celých šest gramů
-      // šest set korun
-      const first=
-        Math.max(
-          0,
-          i-7
-        );
-
-      for(
-        let start=i-1;
-        start>=first;
-        start--
-      ){
-
-        const phrase=
-          tokens
-          .slice(
-            start,
-            i
-          )
-          .map(
-            cleanToken
-          )
-          .filter(Boolean)
-          .join(' ');
-
-        const n=
-          spokenCzechDecimal(
-            phrase
-          );
-
-        if(n!==null){
-
-          return n;
-        }
-      }
-    }
-
-    return null;
-  }
-
-
-  // --------------------------------------------------------------------------
-  // POMOCNÉ FUNKCE
-  // --------------------------------------------------------------------------
-
-  function setValue(
-    id,
-    value
-  ){
-
-    const el=
-      document.getElementById(id);
-
-    if(!el)return;
-
-    el.value=value;
-
-    el.dispatchEvent(
-      new Event(
-        'input',
-        {
-          bubbles:true
-        }
-      )
-    );
-
-    el.dispatchEvent(
-      new Event(
-        'change',
-        {
-          bubbles:true
-        }
-      )
-    );
-  }
-
-
-  function selectGoldByFineness(
-    fineness
-  ){
-
-    const select=
-      document.getElementById(
-        'jobGoldCode'
-      );
-
-    if(!select)return;
-
-    const option=
-      Array.from(
-        select.options
-      ).find(
-        o=>
-          Number(
-            o.dataset&&
-            o.dataset.fineness
-          )===
-          Number(
-            fineness
-          )
-      );
-
-    if(!option)return;
-
-    select.value=
-      option.value;
-
-    select.dispatchEvent(
-      new Event(
-        'change',
-        {
-          bubbles:true
-        }
-      )
-    );
-  }
-
-
-  function personStem(v){
-
-    let s=
-      fold(v)
-      .replace(
-        /[^a-z]/g,
-        ''
-      );
-
-    if(!s)return '';
-
-    s=s.replace(
-      /(ovi|ove|emu|eho)$/,
-      ''
-    );
-
-    s=s.replace(
-      /[aeiouy]$/,
-      ''
-    );
-
-    return s;
-  }
-
-
-  function normalize(v){
-
-    return String(v||'')
-      .toLowerCase()
-      .replace(
-        /\s+/g,
-        ' '
-      )
-      .trim();
-  }
-
-
-  function fold(v){
-
-    return normalize(v)
-      .normalize('NFD')
-      .replace(
-        /[\u0300-\u036f]/g,
-        ''
-      );
-  }
-
-
-  function cleanToken(v){
-
-    return fold(v)
-      .replace(
-        /^[^a-z0-9]+|[^a-z0-9.,]+$/g,
-        ''
-      );
-  }
-
-
-  function parseCzechNumber(v){
-
-    const n=
-      Number(
-        String(v)
-        .replace(
-          /\s/g,
-          ''
-        )
-        .replace(
-          ',',
-          '.'
-        )
-      );
-
-    return Number.isFinite(n)
-      ? n
-      : null;
-  }
-
-
-  function formatInputNumber(v){
-
-    return String(v)
-      .replace(
-        '.',
-        ','
-      );
-  }
-
-
-  function spokenDigits(v){
-
-    const map={
-
-      nula:'0',
-
-      jedna:'1',
-      jeden:'1',
-
-      dva:'2',
-      dve:'2',
-
-      tri:'3',
-
-      ctyri:'4',
-
-      pet:'5',
-
-      sest:'6',
-
-      sedm:'7',
-
-      osm:'8',
-
-      devet:'9'
-    };
-
-    const words=
-      fold(v)
-      .split(/\s+/)
-      .filter(Boolean);
-
-    const found=[];
-
-    for(const word of words){
-
-      if(
-        Object.prototype.hasOwnProperty.call(
-          map,
-          word
-        )
-      ){
-
-        found.push(
-          map[word]
-        );
-      }
-    }
-
-    return found.length
-      ? found.join('')
-      : null;
-  }
-
-
-  function spokenCzechDecimal(v){
-
-    const phrase=
-      fold(v)
-      .replace(
-        /[;:]/g,
-        ' '
-      )
-      .replace(
-        /\s+/g,
-        ' '
-      )
-      .trim();
-
-    if(!phrase){
-      return null;
-    }
-
-    if(
-      /^\d+(?:[.,]\d+)?$/.test(
-        phrase
-      )
-    ){
-
-      return parseCzechNumber(
-        phrase
-      );
-    }
-
-    const parts=
-      phrase.split(
-        /\s+(?:celych|cela|cele|cely|carka|tecka)\s+/
-      );
-
-    if(parts.length===2){
-
-      const whole=
-        spokenCzechInteger(
-          parts[0]
-        );
-
-      const fraction=
-        spokenFraction(
-          parts[1]
-        );
-
-      if(
-        whole===null||
-        fraction===null
-      ){
-
-        return null;
-      }
-
-      return whole+fraction;
-    }
-
-    if(parts.length>2){
-
-      return null;
-    }
-
-    return spokenCzechInteger(
-      phrase
-    );
-  }
-
-
-  function spokenFraction(v){
-
-    const words=
-      fold(v)
-      .split(/\s+/)
-      .filter(Boolean);
-
-    if(!words.length){
-
-      return null;
-    }
-
-    const digits={
-
-      nula:0,
-      jedna:1,
-      jeden:1,
-      dva:2,
-      dve:2,
-      tri:3,
-      ctyri:4,
-      pet:5,
-      sest:6,
-      sedm:7,
-      osm:8,
-      devet:9
-    };
-
-    if(
-      words.every(
-        w=>
-          Object.prototype.hasOwnProperty.call(
-            digits,
-            w
-          )
-      )
-    ){
-
-      const value=
-        words.map(
-          w=>
-            String(
-              digits[w]
-            )
-        ).join('');
-
-      return(
-        Number(value)/
-        Math.pow(
-          10,
-          value.length
-        )
-      );
-    }
-
-    const n=
-      spokenCzechInteger(
-        words.join(' ')
-      );
-
-    if(
-      n===null||
-      n<0
-    ){
-
-      return null;
-    }
-
-    const length=
-      String(
-        Math.trunc(n)
-      ).length;
-
-    return(
-      n/
-      Math.pow(
-        10,
-        length
-      )
-    );
-  }
-
-
-  function spokenCzechInteger(v){
-
-    const small={
-
-      nula:0,
-
-      jeden:1,
-      jedna:1,
-
-      dva:2,
-      dve:2,
-
-      tri:3,
-
-      ctyri:4,
-
-      pet:5,
-
-      sest:6,
-
-      sedm:7,
-
-      osm:8,
-
-      devet:9,
-
-      deset:10,
-
-      jedenact:11,
-      dvanact:12,
-      trinact:13,
-      ctrnact:14,
-      patnact:15,
-      sestnact:16,
-      sedmnact:17,
-      osmnact:18,
-      devatenact:19,
-
-      dvacet:20,
-      tricet:30,
-      ctyricet:40,
-      padesat:50,
-      sedesat:60,
-      sedmdesat:70,
-      osmdesat:80,
-      devadesat:90
-    };
-
-    const words=
-      fold(v)
-      .replace(
-        /[.,]/g,
-        ''
-      )
-      .split(/\s+/)
-      .filter(Boolean);
-
-    if(!words.length){
-
-      return null;
-    }
-
-    let total=0;
-    let current=0;
-    let used=false;
-
-    for(const w of words){
-
-      if(
-        Object.prototype.hasOwnProperty.call(
-          small,
-          w
-        )
-      ){
-
-        current+=small[w];
-        used=true;
-
-        continue;
-      }
-
-      if(
-        w==='sto'||
-        w==='ste'||
-        w==='set'
-      ){
-
-        current=
-          (current||1)*100;
-
-        used=true;
-
-        continue;
-      }
-
-      if(w==='tisic'){
-
-        total+=
-          (current||1)*1000;
-
-        current=0;
-        used=true;
-
-        continue;
-      }
-
-      return null;
-    }
-
-    return used
-      ? total+current
-      : null;
-  }
-
-
-  function showCompactStatus(
-    text,
-    timeout
-  ){
-
-    if(hideTimer){
-
-      clearTimeout(hideTimer);
-      hideTimer=null;
-    }
-
-    status.textContent=text;
-    status.classList.add('show');
-
-    if(timeout){
-
-      hideTimer=setTimeout(
-        function(){
-
-          status.classList.remove(
-            'show'
-          );
-
-        },
-        timeout
-      );
-    }
-  }
-
-
-  function clearTimers(){
-
-    if(restartTimer){
-      clearTimeout(restartTimer);
-      restartTimer=null;
-    }
-
-    if(finishTimer){
-      clearTimeout(finishTimer);
-      finishTimer=null;
-    }
-
-    if(hideTimer){
-      clearTimeout(hideTimer);
-      hideTimer=null;
-    }
-  }
-
-})();
+    if(data.fineness
