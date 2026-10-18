@@ -304,6 +304,35 @@ async function loadMyInternalJobs(){
   }
 }
 
-function tabs(){document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='mine')loadMine();if(b.dataset.tab==='myjobs')loadMyInternalJobs()})}
+// Posun na právě otevřenou sekci. Horní menu zůstává normálně v toku stránky.
+function scrollToSelectedSection(section) {
+  if (!section) return;
+  requestAnimationFrame(() => {
+    const header = document.querySelector('header');
+    const position = header ? window.getComputedStyle(header).position : '';
+    const headerHeight = header && (position === 'fixed' || position === 'sticky')
+      ? header.getBoundingClientRect().height : 0;
+    const targetTop = Math.max(0, window.scrollY + section.getBoundingClientRect().top - headerHeight - 12);
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top: targetTop, behavior: reduceMotion ? 'auto' : 'smooth'});
+  });
+}
+function tabs() {
+  document.querySelectorAll('.worker-nav button[data-tab]').forEach(b => {
+    b.type = 'button';
+    b.onclick = () => {
+      const t = b.dataset.tab;
+      const section = document.getElementById('tab-' + t);
+      if (!section) return;
+      document.querySelectorAll('.worker-nav button[data-tab]').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      section.classList.add('active');
+      scrollToSelectedSection(section);
+      if (t === 'mine') loadMine();
+      if (t === 'myjobs') loadMyInternalJobs();
+    };
+  });
+}
 (async()=>{me=await requireAuth('WORKER');if(!me)return;document.getElementById('who').textContent=me.name+' · WORKER';document.getElementById('conn').textContent='Připojeno';document.getElementById('conn').className='badge good';tabs();loadMine();setJobType('OPRAVA');loadJobGoldOptions();loadJobStoneOptions();loadWorkerRecipients();loadWorkSettings();loadMyInternalJobs()})();
 </script><script src="worker-voice.js"></script></body></html>
