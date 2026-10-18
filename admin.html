@@ -557,7 +557,44 @@ function printInternalJobReport(){
   w.document.close();
 }
 
-function tabs(){document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');const t=b.dataset.tab;if(t==='overview')loadOverview();if(t==='central'){loadCentral();loadReclassData();}if(t==='workers')loadWorkers();if(t==='external'){loadCompanies();loadJobs()}if(t==='companies'){loadCompanies();loadCompanyBalances()}if(t==='jobs')initInternalJobs();if(t==='history')loadHistory();if(t==='users'){loadUsers()}if(t==='devices')loadDevices();if(t==='registration')loadUsers()})}
+// Posun na právě otevřenou sekci. Horní menu zůstává normálně v toku stránky.
+function scrollToSelectedSection(section) {
+  if (!section) return;
+  requestAnimationFrame(() => {
+    const header = document.querySelector('header');
+    const position = header ? window.getComputedStyle(header).position : '';
+    const headerHeight = header && (position === 'fixed' || position === 'sticky')
+      ? header.getBoundingClientRect().height : 0;
+    const targetTop = Math.max(0, window.scrollY + section.getBoundingClientRect().top - headerHeight - 12);
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top: targetTop, behavior: reduceMotion ? 'auto' : 'smooth'});
+  });
+}
+function tabs() {
+  document.querySelectorAll('#nav button[data-tab]').forEach(b => {
+    b.type = 'button';
+    b.onclick = () => {
+      const t = b.dataset.tab;
+      const section = document.getElementById('tab-' + t);
+      if (!section) return;
+      document.querySelectorAll('#nav button[data-tab]').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      section.classList.add('active');
+      scrollToSelectedSection(section);
+      if (t === 'overview') loadOverview();
+      if (t === 'central') { loadCentral(); loadReclassData(); }
+      if (t === 'workers') loadWorkers();
+      if (t === 'external') { loadCompanies(); loadJobs(); }
+      if (t === 'companies') { loadCompanies(); loadCompanyBalances(); }
+      if (t === 'jobs') initInternalJobs();
+      if (t === 'history') loadHistory();
+      if (t === 'users') loadUsers();
+      if (t === 'devices') loadDevices();
+      if (t === 'registration') loadUsers();
+    };
+  });
+}
 document.getElementById('regUser').addEventListener('change',syncRegRole);
 ['jobWorkerFilter','jobMonthFilter','jobStatusFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',()=>{visitedInternalJobIds.clear();syncVisitedJobs();loadInternalJobs()})});
 ['reportMonth','reportWorkerFilter','reportIncludePending'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',loadInternalJobReport)});
